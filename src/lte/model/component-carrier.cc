@@ -118,7 +118,9 @@ ComponentCarrier::SetUlBandwidth (uint8_t bw)
   NS_LOG_FUNCTION (this << uint16_t (bw));
   switch (bw)
     {
+    case 1:
     case 6:
+    case 9:
     case 15:
     case 25:
     case 50:
@@ -145,7 +147,9 @@ ComponentCarrier::SetDlBandwidth (uint8_t bw)
   NS_LOG_FUNCTION (this << uint16_t (bw));
   switch (bw)
     {
+    case 1:
     case 6:
+    case 9:
     case 15:
     case 25:
     case 50:

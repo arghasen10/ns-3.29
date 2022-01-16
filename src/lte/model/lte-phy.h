@@ -67,10 +67,6 @@ public:
 
   virtual ~LtePhy ();
 
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
 
   /**
@@ -141,7 +137,7 @@ public:
 
 
   /**
-  * \returns the RB group size according to the bandwidth
+  * \returns the RB gruop size according to the bandwidth
   */
   uint8_t GetRbgSize (void) const;
   
@@ -177,8 +173,9 @@ public:
   /**
   * \returns the list of control messages to be sent
   */
-  std::list<Ptr<LteControlMessage> > GetControlMessages (void);
+  std::list<Ptr<LteControlMessage> > GetControlMessages (uint32_t nrSubFrames);
 
+  std::list<Ptr<LteControlMessage> > GetDlControlMessages (uint32_t nrSubFrames);
 
   /** 
    * generate a CQI report based on the given SINR of Ctrl frame
@@ -213,18 +210,8 @@ public:
   */
   virtual void ReportRsReceivedPower (const SpectrumValue& power) = 0;
 
-  /**
-  * Set the component carrier ID 
-  *
-  * \param index the component carrier ID index
-  */
   void SetComponentCarrierId (uint8_t index);
 
-  /**
-  * Get the component carrier ID 
-  *
-  * \returns the component carrier ID index
-  */
   uint8_t GetComponentCarrierId ();
 
 protected:
@@ -272,7 +259,7 @@ protected:
    * Specified by the upper layer through CPHY SAP.
    */
   uint8_t m_dlBandwidth;
-  /// The RB group size according to the bandwidth.
+  /// The RB gruop size according to the bandwidth.
   uint8_t m_rbgSize;
   /**
    * The downlink carrier frequency.
@@ -289,6 +276,7 @@ protected:
   std::vector< Ptr<PacketBurst> > m_packetBurstQueue;
   /// A queue of control messages to be sent.
   std::vector< std::list<Ptr<LteControlMessage> > > m_controlMessagesQueue;
+  std::vector< std::list<Ptr<LteControlMessage> > > m_dlControlMessagesQueue;
   /**
    * Delay between MAC and channel layer in terms of TTIs. It is the delay that
    * occurs between a scheduling decision in the MAC and the actual start of
@@ -299,6 +287,7 @@ protected:
    * `MacToChannelDelay` attribute. In LteUePhy, it is 4 TTIs.
    */
   uint8_t m_macChTtiDelay;
+  uint8_t m_macChRxTtiDelay;
 
   /**
    * Cell identifier. In LteEnbPhy, this corresponds to the ID of the cell

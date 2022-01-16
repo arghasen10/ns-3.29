@@ -47,44 +47,23 @@ bool AreOverlapping (Box a, Box b)
   return !((a.xMin > b.xMax) || (b.xMin > a.xMax) || (a.yMin > b.yMax) || (b.yMin > a.yMax));
 }
 
-/**
- * Class that takes care of installing blocks of the
- * buildings in a given area. Buildings are installed in pairs
- * as in dual stripe scenario.
- */
 class FemtocellBlockAllocator
 {
 public:
-  /**
-   * Constructor
-   * \param area the total area
-   * \param nApartmentsX the number of apartments in the X direction
-   * \param nFloors the number of floors
-   */
   FemtocellBlockAllocator (Box area, uint32_t nApartmentsX, uint32_t nFloors);
-  /**
-   * Function that creates building blocks.
-   * \param n the number of blocks to create
-   */
   void Create (uint32_t n);
-  /// Create function
   void Create ();
 
 private:
-  /**
-   * Function that checks if the box area is overlapping with some of previously created building blocks.
-   * \param box the area to check
-   * \returns true if there is an overlap
-   */
-  bool OverlapsWithAnyPrevious (Box box);
-  Box m_area; ///< Area
-  uint32_t m_nApartmentsX; ///< X apartments 
-  uint32_t m_nFloors; ///< number of floors
-  std::list<Box> m_previousBlocks; ///< previous bocks
-  double m_xSize; ///< X size
-  double m_ySize; ///< Y size
-  Ptr<UniformRandomVariable> m_xMinVar; ///< X minimum variance
-  Ptr<UniformRandomVariable> m_yMinVar; ///< Y minimum variance
+  bool OverlapsWithAnyPrevious (Box);
+  Box m_area;
+  uint32_t m_nApartmentsX;
+  uint32_t m_nFloors;
+  std::list<Box> m_previousBlocks;
+  double m_xSize;
+  double m_ySize;
+  Ptr<UniformRandomVariable> m_xMinVar;
+  Ptr<UniformRandomVariable> m_yMinVar;
 
 };
 
@@ -119,7 +98,7 @@ FemtocellBlockAllocator::Create ()
   uint32_t attempt = 0;
   do 
     {
-      NS_ASSERT_MSG (attempt < 100, "Too many failed attempts to position apartment block. Too many blocks? Too small area?");
+      NS_ASSERT_MSG (attempt < 100, "Too many failed attemtps to position apartment block. Too many blocks? Too small area?");
       box.xMin = m_xMinVar->GetValue ();
       box.xMax = box.xMin + m_xSize;
       box.yMin = m_yMinVar->GetValue ();
@@ -203,7 +182,7 @@ PrintGnuplottableUeListToFile (std::string filename)
             {
               Vector pos = node->GetObject<MobilityModel> ()->GetPosition ();
               outFile << "set label \"" << uedev->GetImsi ()
-                      << "\" at "<< pos.x << "," << pos.y << " left font \"Helvetica,4\" textcolor rgb \"grey\" front point pt 1 ps 0.3 lc rgb \"grey\" offset 0,0"
+                      << "\" at "<< pos.x << "," << pos.y << " left font \"Helvetica,4\" textcolor rgb \"black\" front point pt 7 ps 1 lc rgb \"grey\" offset 0,0"
                       << std::endl;
             }
         }
@@ -232,7 +211,7 @@ PrintGnuplottableEnbListToFile (std::string filename)
               Vector pos = node->GetObject<MobilityModel> ()->GetPosition ();
               outFile << "set label \"" << enbdev->GetCellId ()
                       << "\" at "<< pos.x << "," << pos.y
-                      << " left font \"Helvetica,4\" textcolor rgb \"white\" front  point pt 2 ps 0.3 lc rgb \"white\" offset 0,0"
+                      << " left font \"Helvetica,4\" textcolor rgb \"white\" front  point pt 2 ps 0.3 lc rgb \"yellow\" offset 0,0"
                       << std::endl;
             }
         }
@@ -291,7 +270,7 @@ static ns3::GlobalValue g_macroEnbTxPowerDbm ("macroEnbTxPowerDbm",
                                               ns3::MakeDoubleChecker<double> ());
 static ns3::GlobalValue g_homeEnbTxPowerDbm ("homeEnbTxPowerDbm",
                                              "TX power [dBm] used by HeNBs",
-                                             ns3::DoubleValue (20.0),
+                                             ns3::DoubleValue (-20.0 /*20.0*/),
                                              ns3::MakeDoubleChecker<double> ());
 static ns3::GlobalValue g_macroEnbDlEarfcn ("macroEnbDlEarfcn",
                                             "DL EARFCN used by macro eNBs",
@@ -303,11 +282,11 @@ static ns3::GlobalValue g_homeEnbDlEarfcn ("homeEnbDlEarfcn",
                                            ns3::MakeUintegerChecker<uint16_t> ());
 static ns3::GlobalValue g_macroEnbBandwidth ("macroEnbBandwidth",
                                              "bandwidth [num RBs] used by macro eNBs",
-                                             ns3::UintegerValue (25),
+                                             ns3::UintegerValue (6),
                                              ns3::MakeUintegerChecker<uint16_t> ());
 static ns3::GlobalValue g_homeEnbBandwidth ("homeEnbBandwidth",
                                             "bandwidth [num RBs] used by HeNBs",
-                                            ns3::UintegerValue (25),
+                                            ns3::UintegerValue (6),
                                             ns3::MakeUintegerChecker<uint16_t> ());
 static ns3::GlobalValue g_simTime ("simTime",
                                    "Total duration of the simulation [s]",
@@ -364,11 +343,11 @@ static ns3::GlobalValue g_srsPeriodicity ("srsPeriodicity",
                                           ns3::UintegerValue (80),
                                           ns3::MakeUintegerChecker<uint16_t> ());
 static ns3::GlobalValue g_outdoorUeMinSpeed ("outdoorUeMinSpeed",
-                                             "Minimum speed value of macro UE with random waypoint model [m/s].",
+                                             "Minimum speed value of macor UE with random waypoint model [m/s].",
                                              ns3::DoubleValue (0.0),
                                              ns3::MakeDoubleChecker<double> ());
 static ns3::GlobalValue g_outdoorUeMaxSpeed ("outdoorUeMaxSpeed",
-                                             "Maximum speed value of macro UE with random waypoint model [m/s].",
+                                             "Maximum speed value of macor UE with random waypoint model [m/s].",
                                              ns3::DoubleValue (0.0),
                                              ns3::MakeDoubleChecker<double> ());
 
@@ -456,7 +435,7 @@ main (int argc, char *argv[])
 
   Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (srsPeriodicity));
 
-  Box macroUeBox;
+  Box macroUeBox, macroUeBuildings;
   double ueZ = 1.5;
   if (nMacroEnbSites > 0)
     {
@@ -476,6 +455,8 @@ main (int argc, char *argv[])
                         -areaMarginFactor*interSiteDistance, 
                         (nMacroEnbSitesY -1)*interSiteDistance*sqrt (0.75) + areaMarginFactor*interSiteDistance,
                         ueZ, ueZ);
+      macroUeBox = Box (-800, 1200, -600, 600, ueZ, ueZ);
+      macroUeBuildings = Box (100, 600, -100, 100, ueZ, ueZ);
     }
   else
     {
@@ -487,7 +468,7 @@ main (int argc, char *argv[])
   blockAllocator.Create (nBlocks);
 
 
-  uint32_t nHomeEnbs = round (4 * nApartmentsX * nBlocks * nFloors * homeEnbDeploymentRatio * homeEnbActivationRatio);
+  uint32_t nHomeEnbs = round (4 * nApartmentsX * nBlocks * /*nFloors **/ homeEnbDeploymentRatio * homeEnbActivationRatio);
   NS_LOG_LOGIC ("nHomeEnbs = " << nHomeEnbs);
   uint32_t nHomeUes = round (nHomeEnbs * homeUesHomeEnbRatio);
   NS_LOG_LOGIC ("nHomeUes = " << nHomeUes);

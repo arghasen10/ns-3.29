@@ -50,19 +50,20 @@
 // ./waf --run "olsr-hna --assocMethod2=1"
 //
 
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <string>
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/config-store-module.h"
+#include "ns3/wifi-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/olsr-routing-protocol.h"
 #include "ns3/olsr-helper.h"
-#include "ns3/yans-wifi-helper.h"
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
 
 using namespace ns3;
 
@@ -142,7 +143,7 @@ int main (int argc, char *argv[])
   // set it to zero; otherwise, gain will be added
   wifiPhy.Set ("RxGain", DoubleValue (0) );
   // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
-  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
+  wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO);
 
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");

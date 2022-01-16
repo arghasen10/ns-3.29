@@ -20,7 +20,7 @@
  * Author: Nicola Baldo <nbaldo@cttc.es>  : Integrated with new RRC and MAC architecture
  * Author: Danilo Abrignani <danilo.abrignani@unibo.it> : Integrated with new architecture - GSoC 2015 - Carrier Aggregation
  */
-
+#include <ns3/eps-bearer-tag.h>
 #include <ns3/llc-snap-header.h>
 #include <ns3/simulator.h>
 #include <ns3/callback.h>
@@ -43,7 +43,6 @@
 #include <ns3/lte-anr.h>
 #include <ns3/lte-ffr-algorithm.h>
 #include <ns3/ipv4-l3-protocol.h>
-#include <ns3/ipv6-l3-protocol.h>
 #include <ns3/abort.h>
 #include <ns3/log.h>
 #include <ns3/lte-enb-component-carrier-manager.h>
@@ -83,6 +82,21 @@ TypeId LteEnbNetDevice::GetTypeId (void)
                    PointerValue (),
                    MakePointerAccessor (&LteEnbNetDevice::m_ffrAlgorithm),
                    MakePointerChecker <LteFfrAlgorithm> ())
+    .AddAttribute ("LteEnbMac",
+                   "The MAC associated to this EnbNetDevice",
+                   PointerValue (),
+                   MakePointerAccessor (&LteEnbNetDevice::m_mac),
+                   MakePointerChecker <LteEnbMac> ())
+    .AddAttribute ("FfMacScheduler",
+                   "The scheduler associated to this EnbNetDevice",
+                   PointerValue (),
+                   MakePointerAccessor (&LteEnbNetDevice::m_scheduler),
+                   MakePointerChecker <FfMacScheduler> ())
+    .AddAttribute ("LteEnbPhy",
+                   "The PHY associated to this EnbNetDevice",
+                   PointerValue (),
+                   MakePointerAccessor (&LteEnbNetDevice::m_phy),
+                   MakePointerChecker <LteEnbPhy> ())
     .AddAttribute ("LteEnbComponentCarrierManager",
                    "The RRC associated to this EnbNetDevice",
                    PointerValue (),
@@ -251,7 +265,9 @@ LteEnbNetDevice::SetUlBandwidth (uint8_t bw)
   NS_LOG_FUNCTION (this << uint16_t (bw));
   switch (bw)
     { 
+    case 1:
     case 6:
+    case 9:
     case 15:
     case 25:
     case 50:
@@ -278,7 +294,9 @@ LteEnbNetDevice::SetDlBandwidth (uint8_t bw)
   NS_LOG_FUNCTION (this << uint16_t (bw));
   switch (bw)
     { 
+	case 1:
     case 6:
+    case 9:
     case 15:
     case 25:
     case 50:
@@ -356,7 +374,6 @@ LteEnbNetDevice::GetCcMap ()
 void
 LteEnbNetDevice::SetCcMap (std::map< uint8_t, Ptr<ComponentCarrierEnb> > ccm)
 {
-  NS_ASSERT_MSG (!m_isConfigured, "attempt to set CC map after configuration");
   m_ccMap = ccm;
 }
 
@@ -388,7 +405,11 @@ bool
 LteEnbNetDevice::Send (Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber)
 {
   NS_LOG_FUNCTION (this << packet   << dest << protocolNumber);
-  NS_ASSERT_MSG (protocolNumber == Ipv4L3Protocol::PROT_NUMBER || protocolNumber == Ipv6L3Protocol::PROT_NUMBER, "unsupported protocol " << protocolNumber << ", only IPv4/IPv6 is supported");
+  EpsBearerTag tag_t;
+  (packet)->PeekPacketTag (tag_t);
+
+  std::cout<<Simulator::Now().GetSeconds()<<" " <<tag_t.GetRnti ()<< " LteEnbNetDevice::Send "<< packet->GetSize() <<" UID: "<<packet->GetUid()<<std::endl;
+  NS_ASSERT_MSG (protocolNumber == Ipv4L3Protocol::PROT_NUMBER, "unsupported protocol " << protocolNumber << ", only IPv4 is supported");
   return m_rrc->SendData (packet);
 }
 
@@ -404,8 +425,7 @@ LteEnbNetDevice::UpdateConfig (void)
         {
           NS_LOG_LOGIC (this << " Configure cell " << m_cellId);
           // we have to make sure that this function is called only once
-          NS_ASSERT (!m_ccMap.empty ());
-          m_rrc->ConfigureCell (m_ccMap);
+          m_rrc->ConfigureCell (m_cellId);
           m_isConfigured = true;
         }
 

@@ -19,17 +19,15 @@
  */
 
 #include "ns3/test.h"
+#include "ns3/log.h"
 #include "ns3/qos-utils.h"
 #include "ns3/ctrl-headers.h"
 
 using namespace ns3;
 
+NS_LOG_COMPONENT_DEFINE ("BlockAckTest");
+
 /**
- * \ingroup wifi-test
- * \ingroup tests
- *
- * \brief Packet Buffering Case A
- *
  * This simple test verifies the correctness of buffering for packets received
  * under block ack. In order to completely understand this example is important to cite
  * section 9.10.3 in IEEE802.11 standard:
@@ -68,7 +66,7 @@ public:
   virtual ~PacketBufferingCaseA ();
 private:
   virtual void DoRun (void);
-  std::list<uint16_t> m_expectedBuffer; ///< expected test buffer
+  std::list<uint16_t> m_expectedBuffer;
 };
 
 PacketBufferingCaseA::PacketBufferingCaseA ()
@@ -129,13 +127,7 @@ PacketBufferingCaseA::DoRun (void)
 }
 
 
-/**
- * \ingroup wifi-test
- * \ingroup tests
- *
- * \brief Packet Buffering Case B
- *
- * ----- = old packets
+/* ----- = old packets
  * +++++ = new packets
  *
  *  CASE B: startSeq > endSeq
@@ -165,7 +157,7 @@ public:
   virtual ~PacketBufferingCaseB ();
 private:
   virtual void DoRun (void);
-  std::list<uint16_t> m_expectedBuffer; ///< expected test buffer
+  std::list<uint16_t> m_expectedBuffer;
 };
 
 PacketBufferingCaseB::PacketBufferingCaseB ()
@@ -240,19 +232,14 @@ PacketBufferingCaseB::DoRun (void)
 }
 
 
-/**
- * \ingroup wifi-test
- * \ingroup tests
- *
- * \brief Test for block ack header
- */
+//Test for block ack header
 class CtrlBAckResponseHeaderTest : public TestCase
 {
 public:
   CtrlBAckResponseHeaderTest ();
 private:
   virtual void DoRun ();
-  CtrlBAckResponseHeader m_blockAckHdr; ///< block ack header
+  CtrlBAckResponseHeader m_blockAckHdr;
 };
 
 CtrlBAckResponseHeaderTest::CtrlBAckResponseHeaderTest ()
@@ -268,11 +255,11 @@ CtrlBAckResponseHeaderTest::DoRun (void)
   //Case 1: startSeq < endSeq
   //          179        242
   m_blockAckHdr.SetStartingSequence (179);
-  for (uint16_t i = 179; i < 220; i++)
+  for (uint32_t i = 179; i < 220; i++)
     {
       m_blockAckHdr.SetReceivedPacket (i);
     }
-  for (uint16_t i = 225; i <= 242; i++)
+  for (uint32_t i = 225; i <= 242; i++)
     {
       m_blockAckHdr.SetReceivedPacket (i);
     }
@@ -288,11 +275,11 @@ CtrlBAckResponseHeaderTest::DoRun (void)
   //Case 2: startSeq > endSeq
   //          4090       58
   m_blockAckHdr.SetStartingSequence (4090);
-  for (uint16_t i = 4090; i != 10; i = (i + 1) % 4096)
+  for (uint32_t i = 4090; i != 10; i = (i + 1) % 4096)
     {
       m_blockAckHdr.SetReceivedPacket (i);
     }
-  for (uint16_t i = 22; i < 25; i++)
+  for (uint32_t i = 22; i < 25; i++)
     {
       m_blockAckHdr.SetReceivedPacket (i);
     }
@@ -306,12 +293,7 @@ CtrlBAckResponseHeaderTest::DoRun (void)
   NS_TEST_EXPECT_MSG_EQ (m_blockAckHdr.IsPacketReceived (80), false, "error in compressed bitmap");
 }
 
-/**
- * \ingroup wifi-test
- * \ingroup tests
- *
- * \brief Block Ack Test Suite
- */
+
 class BlockAckTestSuite : public TestSuite
 {
 public:
@@ -326,4 +308,4 @@ BlockAckTestSuite::BlockAckTestSuite ()
   AddTestCase (new CtrlBAckResponseHeaderTest, TestCase::QUICK);
 }
 
-static BlockAckTestSuite g_blockAckTestSuite; ///< the test suite
+static BlockAckTestSuite g_blockAckTestSuite;

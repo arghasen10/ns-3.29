@@ -18,10 +18,11 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
-#include "ns3/log.h"
-#include "ns3/simulator.h"
 #include "amrr-wifi-manager.h"
-#include "wifi-tx-vector.h"
+#include "ns3/simulator.h"
+#include "ns3/log.h"
+#include "ns3/uinteger.h"
+#include "ns3/double.h"
 
 #define Min(a,b) ((a < b) ? a : b)
 
@@ -37,15 +38,15 @@ NS_LOG_COMPONENT_DEFINE ("AmrrWifiManager");
  */
 struct AmrrWifiRemoteStation : public WifiRemoteStation
 {
-  Time m_nextModeUpdate; ///< next mode update time
-  uint32_t m_tx_ok; ///< transmit ok
-  uint32_t m_tx_err; ///< transmit error
-  uint32_t m_tx_retr; ///< transmit retry
-  uint32_t m_retry; ///< retry
-  uint8_t m_txrate; ///< transmit rate
-  uint32_t m_successThreshold; ///< success threshold
-  uint32_t m_success; ///< success
-  bool m_recovery; ///< recovery
+  Time m_nextModeUpdate;
+  uint32_t m_tx_ok;
+  uint32_t m_tx_err;
+  uint32_t m_tx_retr;
+  uint32_t m_retry;
+  uint32_t m_txrate;
+  uint32_t m_successThreshold;
+  uint32_t m_success;
+  bool m_recovery;
 };
 
 
@@ -83,22 +84,11 @@ AmrrWifiManager::GetTypeId (void)
                    UintegerValue (1),
                    MakeUintegerAccessor (&AmrrWifiManager::m_minSuccessThreshold),
                    MakeUintegerChecker<uint32_t> ())
-    .AddTraceSource ("Rate",
-                     "Traced value for rate changes (b/s)",
-                     MakeTraceSourceAccessor (&AmrrWifiManager::m_currentRate),
-                     "ns3::TracedValueCallback::Uint64")
   ;
   return tid;
 }
 
 AmrrWifiManager::AmrrWifiManager ()
-  : WifiRemoteStationManager (),
-    m_currentRate (0)
-{
-  NS_LOG_FUNCTION (this);
-}
-
-AmrrWifiManager::~AmrrWifiManager ()
 {
   NS_LOG_FUNCTION (this);
 }
@@ -252,7 +242,7 @@ AmrrWifiManager::UpdateMode (AmrrWifiRemoteStation *station)
       station->m_success++;
       NS_LOG_DEBUG ("++ success=" << station->m_success << " successThreshold=" << station->m_successThreshold <<
                     " tx_ok=" << station->m_tx_ok << " tx_err=" << station->m_tx_err << " tx_retr=" << station->m_tx_retr <<
-                    " rate=" << +station->m_txrate << " n-supported-rates=" << +GetNSupported (station));
+                    " rate=" << station->m_txrate << " n-supported-rates=" << GetNSupported (station));
       if (station->m_success >= station->m_successThreshold
           && !IsMaxRate (station))
         {
@@ -271,7 +261,7 @@ AmrrWifiManager::UpdateMode (AmrrWifiRemoteStation *station)
       station->m_success = 0;
       NS_LOG_DEBUG ("-- success=" << station->m_success << " successThreshold=" << station->m_successThreshold <<
                     " tx_ok=" << station->m_tx_ok << " tx_err=" << station->m_tx_err << " tx_retr=" << station->m_tx_retr <<
-                    " rate=" << +station->m_txrate << " n-supported-rates=" << +GetNSupported (station));
+                    " rate=" << station->m_txrate << " n-supported-rates=" << GetNSupported (station));
       if (!IsMinRate (station))
         {
           if (station->m_recovery)
@@ -307,7 +297,7 @@ AmrrWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
   AmrrWifiRemoteStation *station = (AmrrWifiRemoteStation *)st;
   UpdateMode (station);
   NS_ASSERT (station->m_txrate < GetNSupported (station));
-  uint8_t rateIndex;
+  uint32_t rateIndex;
   if (station->m_retry < 1)
     {
       rateIndex = station->m_txrate;
@@ -345,19 +335,14 @@ AmrrWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
           rateIndex = station->m_txrate;
         }
     }
-  uint16_t channelWidth = GetChannelWidth (station);
+  uint32_t channelWidth = GetChannelWidth (station);
   if (channelWidth > 20 && channelWidth != 22)
     {
       //avoid to use legacy rate adaptation algorithms for IEEE 802.11n/ac
       channelWidth = 20;
     }
   WifiMode mode = GetSupported (station, rateIndex);
-  if (m_currentRate != mode.GetDataRate (channelWidth))
-    {
-      NS_LOG_DEBUG ("New datarate: " << mode.GetDataRate (channelWidth));
-      m_currentRate = mode.GetDataRate (channelWidth);
-    }
-  return WifiTxVector (mode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (mode, GetAddress (station)), 800, 1, 1, 0, channelWidth, GetAggregation (station), false);
+  return WifiTxVector (mode, GetDefaultTxPowerLevel (), GetLongRetryCount (station), GetPreambleForTransmission (mode, GetAddress (station)), 800, 1, 1, 0, channelWidth, GetAggregation (station), false);
 }
 
 WifiTxVector
@@ -365,7 +350,7 @@ AmrrWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
 {
   NS_LOG_FUNCTION (this << st);
   AmrrWifiRemoteStation *station = (AmrrWifiRemoteStation *)st;
-  uint16_t channelWidth = GetChannelWidth (station);
+  uint32_t channelWidth = GetChannelWidth (station);
   if (channelWidth > 20 && channelWidth != 22)
     {
       //avoid to use legacy rate adaptation algorithms for IEEE 802.11n/ac
@@ -382,13 +367,14 @@ AmrrWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
     {
       mode = GetNonErpSupported (station, 0);
     }
-  rtsTxVector = WifiTxVector (mode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (mode, GetAddress (station)), 800, 1, 1, 0, channelWidth, GetAggregation (station), false);
+  rtsTxVector = WifiTxVector (mode, GetDefaultTxPowerLevel (), GetLongRetryCount (station), GetPreambleForTransmission (mode, GetAddress (station)), 800, 1, 1, 0, channelWidth, GetAggregation (station), false);
   return rtsTxVector;
 }
 
 bool
 AmrrWifiManager::IsLowLatency (void) const
 {
+  NS_LOG_FUNCTION (this);
   return true;
 }
 

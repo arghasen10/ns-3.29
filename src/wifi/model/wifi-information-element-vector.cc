@@ -72,24 +72,15 @@ WifiInformationElementVector::Serialize (Buffer::Iterator start) const
 uint32_t
 WifiInformationElementVector::Deserialize (Buffer::Iterator start)
 {
-  NS_FATAL_ERROR ("This variant should not be called on a variable-sized header");
-  return 0;
-}
-
-uint32_t
-WifiInformationElementVector::Deserialize (Buffer::Iterator start, Buffer::Iterator end)
-{
-  uint32_t size = start.GetDistanceFrom (end);
-  uint32_t remaining = size;
-  while (remaining > 0)
+  Buffer::Iterator i = start;
+  uint32_t size = start.GetSize ();
+  while (size > 0)
     {
-      uint32_t deserialized = DeserializeSingleIe (start);
-      start.Next (deserialized);
-      NS_ASSERT (deserialized <= remaining);
-      remaining -= deserialized;
+      uint32_t deserialized = DeserializeSingleIe (i);
+      i.Next (deserialized);
+      size -= deserialized;
     }
-  NS_ASSERT_MSG (remaining == 0, "Error in deserialization");
-  return size;
+  return i.GetDistanceFrom (start);
 }
 
 uint32_t
@@ -103,9 +94,8 @@ WifiInformationElementVector::DeserializeSingleIe (Buffer::Iterator start)
   Ptr<WifiInformationElement> newElement;
   switch (id)
     {
-    case 0: // eliminate compiler warning
     default:
-      NS_FATAL_ERROR ("Information element " << +id << " is not implemented");
+      NS_FATAL_ERROR ("Information element " << (uint16_t) id << " is not implemented");
       return 0;
     }
   /*  unreachable:  b/c switch is guaranteed to return from this function
@@ -125,10 +115,16 @@ WifiInformationElementVector::Print (std::ostream & os) const
 {
   for (IE_VECTOR::const_iterator i = m_elements.begin (); i != m_elements.end (); i++)
     {
-      os << "(";
+       os << "(";
       (*i)->Print (os);
-      os << ")";
+       os << ")";
     }
+}
+
+void
+WifiInformationElementVector::SetMaxSize (uint16_t size)
+{
+  m_maxSize = size;
 }
 
 WifiInformationElementVector::Iterator
@@ -166,6 +162,21 @@ WifiInformationElementVector::FindFirst (WifiInformationElementId id) const
     }
   return 0;
 }
+
+
+namespace {
+
+struct PIEComparator
+{
+  bool
+  operator () (Ptr<WifiInformationElement> a, Ptr<WifiInformationElement> b) const
+  {
+    return ((*PeekPointer (a)) < (*PeekPointer (b)));
+  }
+};
+
+}
+
 
 uint32_t
 WifiInformationElementVector::GetSize () const

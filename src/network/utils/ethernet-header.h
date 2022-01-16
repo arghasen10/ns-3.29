@@ -28,8 +28,6 @@
 namespace ns3 {
 
 /**
- * \ingroup network
- *
  * Types of ethernet packets. Indicates the type of the current
  * header.
  */

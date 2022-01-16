@@ -41,14 +41,6 @@
 #include "ns3/icmpv4-l4-protocol.h"
 
 namespace ns3 {
-
-/**
- * \ingroup dsr
- *
- * \brief DSR helper class to manage creation of DSR routing instance and
- *        to insert it on a node as a sublayer between transport and 
- *        IP layers.
- */
 class DsrHelper
 {
 public:
@@ -75,21 +67,15 @@ public:
    * \returns a newly-created L4 protocol
    */
   Ptr<ns3::dsr::DsrRouting> Create (Ptr<Node> node) const;
-  /**
-   * Set attribute values for future instances of DSR that this helper creates
-   * \param name the node on which the routing protocol will run
-   * \param value newly-created L4 protocol
-   */
   void Set (std::string name, const AttributeValue &value);
 private:
   /**
    * \brief Assignment operator declared private and not implemented to disallow
    * assignment and prevent the compiler from happily inserting its own.
-   * \param o source object
-   * \return DsrHelper object
    */
   DsrHelper & operator = (const DsrHelper &o);
-  ObjectFactory m_agentFactory; ///< DSR factory
+  ObjectFactory m_agentFactory;
+  NodeContainer m_nodes;
 };
 
 } // namespace ns3

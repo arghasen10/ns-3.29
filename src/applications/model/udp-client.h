@@ -76,10 +76,17 @@ private:
   /**
    * \brief Send a packet
    */
+  void SendSingleP(uint16_t pt, uint32_t siz);
+  void SendOtherVoicecall(void);
+  void SendDiagnostics(void);
   void Send (void);
+  void Receive(Ptr<Socket> socket, uint32_t length);//, const Packet &packet, const Address &from);
 
   uint32_t m_count; //!< Maximum number of packets the application will send
   Time m_interval; //!< Packet inter-send time
+  uint32_t percent; //S: introducing percent for irregular traffic, values should lie between 1 and 10.
+  uint32_t EnableRandom; //S: Introducing the EnableRandom for the client to be able to select reg or irregular traffic
+  uint16_t enable_diagnostic;
   uint32_t m_size; //!< Size of the sent packet (including the SeqTsHeader)
 
   uint32_t m_sent; //!< Counter for sent packets

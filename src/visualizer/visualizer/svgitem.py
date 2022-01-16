@@ -1,38 +1,11 @@
-from gi.repository import GObject, GooCanvas
+import gobject
 import rsvg
 #import cairo
+import goocanvas
 import os.path
 
 
-## SvgItem class
-class SvgItem(GooCanvas.ItemSimple):
-    ## @var x
-    #  x
-    ## @var y
-    #  y
-    ## @var sx
-    #  x step
-    ## @var sy
-    #  y step
-    ## @var handle
-    #  handle
-    ## @var width
-    #  width
-    ## @var height
-    #  height
-    ## @var custom_width
-    #  custom width
-    ## @var custom_height
-    #  custom height
-    ## @var bounds_x1
-    #  minimum x
-    ## @var bounds_y1
-    #  minimum y
-    ## @var bounds_x2
-    #  maximum x
-    ## @var bounds_y2
-    #  maximum y
-    ## @var __gproperties__
+class SvgItem(goocanvas.ItemSimple):
     # setup our custom properties
     __gproperties__ = {
         'x': (float,                                # property type
@@ -41,7 +14,7 @@ class SvgItem(GooCanvas.ItemSimple):
               -10e6,                                    # property minimum value
               10e6,                                 # property maximum value
               0,                                    # property default value
-              GObject.PARAM_READWRITE),             # property flags
+              gobject.PARAM_READWRITE),             # property flags
 
         'y': (float,
               'Y',
@@ -49,7 +22,7 @@ class SvgItem(GooCanvas.ItemSimple):
               -10e6,
               10e6,
               0,
-              GObject.PARAM_READWRITE),
+              gobject.PARAM_READWRITE),
 
         'width': (float,
                   'Width',
@@ -57,7 +30,7 @@ class SvgItem(GooCanvas.ItemSimple):
                   0,
                   10e6,
                   0,
-                  GObject.PARAM_READWRITE),
+                  gobject.PARAM_READWRITE),
 
         'height': (float,
                    'Height',
@@ -65,14 +38,10 @@ class SvgItem(GooCanvas.ItemSimple):
                    0,
                    10e6,
                    0,
-                   GObject.PARAM_READWRITE),
+                   gobject.PARAM_READWRITE),
         }
-
+    
     def __init__(self, x, y, rsvg_handle, **kwargs):
-        """
-        Initializer
-        @param self this object
-        """
         super(SvgItem, self).__init__(**kwargs)
         assert isinstance(rsvg_handle, rsvg.Handle)
         self.x = x
@@ -86,48 +55,36 @@ class SvgItem(GooCanvas.ItemSimple):
         self.custom_height = None
 
     def do_set_property(self, pspec, value):
-        """!
-        Set Property
-        @param self this object
-        @param pspec property name
-        @param value property value
-        @return exception if unknown property
-        """
         if pspec.name == 'x':
             self.x = value
-
+            
             # make sure we update the display
             self.changed(True)
-
+        
         elif pspec.name == 'y':
             self.y = value
-
+            
             # make sure we update the display
             self.changed(True)
-
+        
         elif pspec.name == 'width':
             self.custom_width = value
             self._size_changed()
-
+            
             # make sure we update the display
             self.changed(True)
 
         elif pspec.name == 'height':
             self.custom_height = value
             self._size_changed()
-
+            
             # make sure we update the display
             self.changed(True)
-
+        
         else:
             raise AttributeError, 'unknown property %s' % pspec.name
 
     def _size_changed(self):
-        """!
-        Size Changed function
-        @param self this object
-        @return exception if unknown property
-        """
         if self.custom_width is None and self.custom_height is None:
             self.width = self.handle.props.width
             self.height = self.handle.props.height
@@ -150,12 +107,6 @@ class SvgItem(GooCanvas.ItemSimple):
             self.sy = self.custom_height / self.handle.props.height
 
     def do_get_property(self, pspec):
-        """!
-        Get Property
-        @param self this object
-        @param pspec property name
-        @return property value or exception if unknown property
-        """
         if pspec.name == 'x':
             return self.x
 
@@ -173,44 +124,22 @@ class SvgItem(GooCanvas.ItemSimple):
 
         else:
             raise AttributeError, 'unknown property %s' % pspec.name
-
+    
     def do_simple_paint(self, cr, bounds):
-        """!
-        Simple Paint function
-        @param self this object
-        @param cr rendered
-        @param bounds bounds
-        @return none
-        """
         cr.translate(self.x, self.y)
         cr.scale(self.sx, self.sy)
         self.handle.render_cairo(cr)
 
     def do_simple_update(self, cr):
-        """!
-        Simple Update function
-        @param self this object
-        @param cr rendered
-        @return none
-        """
         self.bounds_x1 = float(self.x)
         self.bounds_y1 = float(self.y)
         self.bounds_x2 = float(self.x + self.width)
         self.bounds_y2 = float(self.y + self.height)
 
     def do_simple_is_item_at(self, x, y, cr, is_pointer_event):
-        """!
-        Simple Is Item At function
-        @param self this object
-        @param x the X position
-        @param y the Y position
-        @param cr rendered
-        @param is_pointer_event is the event a pointer event
-        @return true if at or false if not
-        """
         if ((x < self.x) or (x > self.x + self.width)) or ((y < self.y) or (y > self.y + self.height)):
             return False
-        else:
+        else:    
             return True
 
 

@@ -79,7 +79,7 @@ std::stringstream filePlotQueueAvg;
 void
 CheckQueueSize (Ptr<QueueDisc> queue)
 {
-  uint32_t qSize = queue->GetCurrentSize ().GetValue ();
+  uint32_t qSize = StaticCast<RedQueueDisc> (queue)->GetQueueSize ();
 
   avgQueueSize += qSize;
   checkTimes++;
@@ -317,13 +317,14 @@ main (int argc, char *argv[])
 
   // RED params
   NS_LOG_INFO ("Set RED params");
-  Config::SetDefault ("ns3::RedQueueDisc::MaxSize", StringValue ("1000p"));
+  Config::SetDefault ("ns3::RedQueueDisc::Mode", StringValue ("QUEUE_MODE_PACKETS"));
   Config::SetDefault ("ns3::RedQueueDisc::MeanPktSize", UintegerValue (meanPktSize));
   Config::SetDefault ("ns3::RedQueueDisc::Wait", BooleanValue (true));
   Config::SetDefault ("ns3::RedQueueDisc::Gentle", BooleanValue (true));
   Config::SetDefault ("ns3::RedQueueDisc::QW", DoubleValue (0.002));
   Config::SetDefault ("ns3::RedQueueDisc::MinTh", DoubleValue (5));
   Config::SetDefault ("ns3::RedQueueDisc::MaxTh", DoubleValue (15));
+  Config::SetDefault ("ns3::RedQueueDisc::QueueLimit", UintegerValue (1000));
 
   if (redTest == 3) // test like 1, but with bad params
     {
@@ -332,11 +333,11 @@ main (int argc, char *argv[])
     }
   else if (redTest == 5) // test 5, same of test 4, but in byte mode
     {
-      Config::SetDefault ("ns3::RedQueueDisc::MaxSize",
-                          QueueSizeValue (QueueSize (QueueSizeUnit::BYTES, 1000 * meanPktSize)));
+      Config::SetDefault ("ns3::RedQueueDisc::Mode", StringValue ("QUEUE_MODE_BYTES"));
       Config::SetDefault ("ns3::RedQueueDisc::Ns1Compat", BooleanValue (true));
       Config::SetDefault ("ns3::RedQueueDisc::MinTh", DoubleValue (5 * meanPktSize));
       Config::SetDefault ("ns3::RedQueueDisc::MaxTh", DoubleValue (15 * meanPktSize));
+      Config::SetDefault ("ns3::RedQueueDisc::QueueLimit", UintegerValue (1000 * meanPktSize));
     }
 
   NS_LOG_INFO ("Install internet stack on all nodes.");
@@ -345,7 +346,7 @@ main (int argc, char *argv[])
 
   TrafficControlHelper tchPfifo;
   uint16_t handle = tchPfifo.SetRootQueueDisc ("ns3::PfifoFastQueueDisc");
-  tchPfifo.AddInternalQueues (handle, 3, "ns3::DropTailQueue", "MaxSize", StringValue ("1000p"));
+  tchPfifo.AddInternalQueues (handle, 3, "ns3::DropTailQueue", "MaxPackets", UintegerValue (1000));
 
   TrafficControlHelper tchRed;
   tchRed.SetRootQueueDisc ("ns3::RedQueueDisc", "LinkBandwidth", StringValue (redLinkDataRate),
@@ -411,8 +412,9 @@ main (int argc, char *argv[])
       // like in ns2 test, r2 -> r1, have a queue in packet mode
       Ptr<QueueDisc> queue = queueDiscs.Get (1);
 
-      queue->SetMaxSize (QueueSize ("1000p"));
+      StaticCast<RedQueueDisc> (queue)->SetMode (Queue::QUEUE_MODE_PACKETS);
       StaticCast<RedQueueDisc> (queue)->SetTh (5, 15);
+      StaticCast<RedQueueDisc> (queue)->SetQueueLimit (1000);
     }
 
   BuildAppsTest (redTest);
@@ -456,13 +458,17 @@ main (int argc, char *argv[])
 
   if (printRedStats)
     {
-      QueueDisc::Stats st = queueDiscs.Get (0)->GetStats ();
-      std::cout << "*** RED stats from Node 2 queue disc ***" << std::endl;
-      std::cout << st << std::endl;
+      RedQueueDisc::Stats st = StaticCast<RedQueueDisc> (queueDiscs.Get (0))->GetStats ();
+      std::cout << "*** RED stats from Node 2 queue ***" << std::endl;
+      std::cout << "\t " << st.unforcedDrop << " drops due prob mark" << std::endl;
+      std::cout << "\t " << st.forcedDrop << " drops due hard mark" << std::endl;
+      std::cout << "\t " << st.qLimDrop << " drops due queue full" << std::endl;
 
-      st = queueDiscs.Get (1)->GetStats ();
-      std::cout << "*** RED stats from Node 3 queue disc ***" << std::endl;
-      std::cout << st << std::endl;
+      st = StaticCast<RedQueueDisc> (queueDiscs.Get (1))->GetStats ();
+      std::cout << "*** RED stats from Node 3 queue ***" << std::endl;
+      std::cout << "\t " << st.unforcedDrop << " drops due prob mark" << std::endl;
+      std::cout << "\t " << st.forcedDrop << " drops due hard mark" << std::endl;
+      std::cout << "\t " << st.qLimDrop << " drops due queue full" << std::endl;
     }
 
   Simulator::Destroy ();

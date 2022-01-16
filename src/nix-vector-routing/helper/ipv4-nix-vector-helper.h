@@ -27,8 +27,6 @@
 namespace ns3 {
 
 /**
- * \ingroup nix-vector-routing
- *
  * \brief Helper class that adds Nix-vector routing to nodes.
  *
  * This class is expected to be used in conjunction with 
@@ -70,7 +68,6 @@ private:
   /**
    * \brief Assignment operator declared private and not implemented to disallow
    * assignment and prevent the compiler from happily inserting its own.
-   * \return Nothing useful.
    */
   Ipv4NixVectorHelper &operator = (const Ipv4NixVectorHelper &);
 

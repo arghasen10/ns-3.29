@@ -79,31 +79,25 @@ public:
    */
   virtual void UlReceiveMacCe (MacCeListElement_s bsr, uint8_t componentCarrierId) = 0;
 
-  /**
+  /*
    * \brief Notifies component carrier manager about physical resource block occupancy
    * \param prbOccupancy The physical resource block occupancy
-   * \param componentCarrierId The component carrier id
+   * \param componentCarrierId The component carrier id.
    */
   virtual void NotifyPrbOccupancy (double prbOccupancy, uint8_t componentCarrierId) = 0;
 
 }; // end of class LteCcmMacSapUser
 
-/// MemberLteCcmMacSapProvider class
 template <class C>
 class MemberLteCcmMacSapProvider : public LteCcmMacSapProvider
 {
 public:
-  /**
-   * Constructor
-   *
-   * \param owner the owner class
-   */
   MemberLteCcmMacSapProvider (C* owner);
   // inherited from LteCcmRrcSapProvider
   virtual void ReportMacCeToScheduler (MacCeListElement_s bsr);
 
 private:
-  C* m_owner; ///< the owner class
+  C* m_owner;
 };
 
 template <class C>
@@ -119,16 +113,11 @@ void MemberLteCcmMacSapProvider<C>::ReportMacCeToScheduler (MacCeListElement_s b
 }
 
 
-/// MemberLteCcmMacSapUser class
 template <class C>
 class MemberLteCcmMacSapUser : public LteCcmMacSapUser
 {
 public:
-  /**
-   * Constructor
-   *
-   * \param owner the owner class
-   */
+
   MemberLteCcmMacSapUser (C* owner);
   // inherited from LteCcmRrcSapUser
   virtual void UlReceiveMacCe (MacCeListElement_s bsr, uint8_t componentCarrierId);
@@ -140,7 +129,7 @@ public:
 
 
 private:
-  C* m_owner; ///< the owner class
+  C* m_owner;
 };
 
 template <class C>

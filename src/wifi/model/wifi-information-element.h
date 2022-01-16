@@ -155,7 +155,7 @@ typedef uint8_t WifiInformationElementId;
 #define IE_MCCAOP_SETUP_REQUEST                 ((WifiInformationElementId)121)
 #define IE_MCCAOP_SETUP_REPLY                   ((WifiInformationElementId)122)
 #define IE_MCCAOP_ADVERTISEMENT                 ((WifiInformationElementId)123)
-#define IE_MCCAOP_TEARDOWN                      ((WifiInformationElementId)124)
+#define IE_MCCAOP TEARDOWN                      ((WifiInformationElementId)124)
 #define IE_GANN                                 ((WifiInformationElementId)125)
 #define IE_RANN                                 ((WifiInformationElementId)126)
 // 67 to 126 are reserved
@@ -187,7 +187,6 @@ typedef uint8_t WifiInformationElementId;
 #define IE_VENDOR_SPECIFIC                      ((WifiInformationElementId)221)
 // 222 to 255 are reserved
 #define IE_HE_CAPABILITIES                      ((WifiInformationElementId)255) //todo: not defined yet in the standard!
-#define IE_HE_OPERATION                         ((WifiInformationElementId)255) //todo: not defined yet in the standard!
 
 
 /**
@@ -270,9 +269,7 @@ public:
   uint16_t GetSerializedSize () const;
 
   // Each subclass must implement these pure virtual functions:
-  /**
-   * \returns Own unique Element ID
-   */
+  /// Own unique Element ID
   virtual WifiInformationElementId ElementId () const = 0;
   /**
    * Length of serialized information (i.e., the length of the body
@@ -310,6 +307,15 @@ public:
    * \param os output stream
    */
   virtual void Print (std::ostream &os) const;
+  /**
+   * Compare information elements using Element ID
+   *
+   * \param a another information element to compare with
+   *
+   * \return true if the Element ID is less than the other IE Element ID,
+   *         false otherwise
+   */
+  virtual bool operator< (WifiInformationElement const & a) const;
   /**
    * Compare two IEs for equality by ID & Length, and then through
    * memcmp of serialised version

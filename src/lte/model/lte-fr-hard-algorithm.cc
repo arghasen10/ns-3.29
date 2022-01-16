@@ -28,14 +28,21 @@ NS_LOG_COMPONENT_DEFINE ("LteFrHardAlgorithm");
 
 NS_OBJECT_ENSURE_REGISTERED (LteFrHardAlgorithm);
 
-/// FrHardDownlinkDefaultConfiguration structure
 static const struct FrHardDownlinkDefaultConfiguration
 {
   uint8_t m_cellId; ///< cell ID
   uint8_t m_dlBandwidth; ///< DL bandwidth
   uint8_t m_dlOffset; ///< DL offset
   uint8_t m_dlSubBand; ///< DL subband
-} g_frHardDownlinkDefaultConfiguration[] = {
+}
+
+g_frHardDownlinkDefaultConfiguration[] = {
+  { 1, 6, 0, 2},
+  { 2, 6, 2, 2},
+  { 3, 6, 4, 2},
+  { 1, 9, 0, 3},
+  { 2, 9, 3, 3},
+  { 3, 9, 6, 3},
   { 1, 15, 0, 4},
   { 2, 15, 4, 4},
   { 3, 15, 8, 6},
@@ -51,16 +58,23 @@ static const struct FrHardDownlinkDefaultConfiguration
   { 1, 100, 0, 32},
   { 2, 100, 32, 32},
   { 3, 100, 64, 36}
-}; ///< the hard downlink default configuration
+};
 
-/// FrHardUplinkDefaultConfiguration structure
 static const struct FrHardUplinkDefaultConfiguration
 {
   uint8_t m_cellId; ///< cell ID
   uint8_t m_ulBandwidth; ///< UL bandwidth
   uint8_t m_ulOffset; ///< Ul offset
   uint8_t m_ulSubBand; ///< UL subband
-} g_frHardUplinkDefaultConfiguration[] = {
+}
+
+g_frHardUplinkDefaultConfiguration[] = {
+  { 1, 6, 0, 2},
+  { 2, 6, 2, 2},
+  { 3, 6, 4, 2},
+  { 1, 9, 0, 3},
+  { 2, 9, 3, 3},
+  { 3, 9, 6, 3},
   { 1, 15, 0, 5},
   { 2, 15, 5, 5},
   { 3, 15, 10, 5},
@@ -76,11 +90,9 @@ static const struct FrHardUplinkDefaultConfiguration
   { 1, 100, 0, 32},
   { 2, 100, 32, 32},
   { 3, 100, 64, 36}
-}; ///< the hard uplink default configuration
+};
 
-/** \returns number of downlink configurations */
 const uint16_t NUM_DOWNLINK_CONFS (sizeof (g_frHardDownlinkDefaultConfiguration) / sizeof (FrHardDownlinkDefaultConfiguration));
-/** \returns number of uplink configurations */
 const uint16_t NUM_UPLINK_CONFS (sizeof (g_frHardUplinkDefaultConfiguration) / sizeof (FrHardUplinkDefaultConfiguration));
 
 LteFrHardAlgorithm::LteFrHardAlgorithm ()
@@ -181,8 +193,8 @@ LteFrHardAlgorithm::DoInitialize ()
   NS_LOG_FUNCTION (this);
   LteFfrAlgorithm::DoInitialize ();
 
-  NS_ASSERT_MSG (m_dlBandwidth > 14,"DlBandwidth must be at least 15 to use FFR algorithms");
-  NS_ASSERT_MSG (m_ulBandwidth > 14,"UlBandwidth must be at least 15 to use FFR algorithms");
+  NS_ASSERT_MSG (m_dlBandwidth > 5,"DlBandwidth must be at least 6 to use FFR algorithms");
+  NS_ASSERT_MSG (m_ulBandwidth > 5,"UlBandwidth must be at least 6 to use FFR algorithms");
 
   if (m_frCellTypeId != 0)
     {
@@ -252,8 +264,9 @@ LteFrHardAlgorithm::InitializeDownlinkRbgMaps ()
   for (uint8_t i = m_dlOffset / rbgSize; i < (m_dlOffset / rbgSize + m_dlSubBand / rbgSize); i++)
     {
       m_dlRbgMap[i] = false;
-
+      //std::cout << (int)i << " ";
     }
+    //std::cout << "\n";
 }
 
 void
@@ -277,7 +290,9 @@ LteFrHardAlgorithm::InitializeUplinkRbgMaps ()
   for (uint8_t i = m_ulOffset; i < (m_ulOffset + m_ulSubBand); i++)
     {
       m_ulRbgMap[i] = false;
+      std::cout << (int)i << " ";
     }
+    std::cout << "\n";
 }
 
 std::vector <bool>

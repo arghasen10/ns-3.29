@@ -21,7 +21,7 @@
 
 #include "ns3/test.h"
 #include "ns3/red-queue-disc.h"
-#include "ns3/packet.h"
+#include "ns3/drop-tail-queue.h"
 #include "ns3/uinteger.h"
 #include "ns3/string.h"
 #include "ns3/double.h"
@@ -30,48 +30,21 @@
 
 using namespace ns3;
 
-/**
- * \ingroup traffic-control
- * \defgroup traffic-control-test traffic-control module tests
- */
-
-
-/**
- * \ingroup traffic-control-test
- * \ingroup tests
- *
- * \brief Ared Queue Disc Test Item
- */
 class AredQueueDiscTestItem : public QueueDiscItem {
 public:
-  /**
-   * Constructor
-   *
-   * \param p packet
-   * \param addr address
-   */
-  AredQueueDiscTestItem (Ptr<Packet> p, const Address & addr);
+  AredQueueDiscTestItem (Ptr<Packet> p, const Address & addr, uint16_t protocol);
   virtual ~AredQueueDiscTestItem ();
   virtual void AddHeader (void);
   virtual bool Mark(void);
 
 private:
   AredQueueDiscTestItem ();
-  /**
-   * \brief Copy constructor
-   * Disable default implementation to avoid misuse
-   */
   AredQueueDiscTestItem (const AredQueueDiscTestItem &);
-  /**
-   * \brief Assignment operator
-   * \return this object
-   * Disable default implementation to avoid misuse
-   */
   AredQueueDiscTestItem &operator = (const AredQueueDiscTestItem &);
 };
 
-AredQueueDiscTestItem::AredQueueDiscTestItem (Ptr<Packet> p, const Address & addr)
-  : QueueDiscItem (p, addr, 0)
+AredQueueDiscTestItem::AredQueueDiscTestItem (Ptr<Packet> p, const Address & addr, uint16_t protocol)
+  : QueueDiscItem (p, addr, protocol)
 {
 }
 
@@ -90,37 +63,16 @@ AredQueueDiscTestItem::Mark (void)
   return false;
 }
 
-/**
- * \ingroup traffic-control-test
- * \ingroup tests
- *
- * \brief Ared Queue Disc Test Case
- */
+// Tests to verify the working of ARED
 class AredQueueDiscTestCase : public TestCase
 {
 public:
   AredQueueDiscTestCase ();
   virtual void DoRun (void);
 private:
-  /**
-   * Enqueue function
-   * \param queue the queue disc
-   * \param size the size
-   * \param nPkt the number of packets
-   */
   void Enqueue (Ptr<RedQueueDisc> queue, uint32_t size, uint32_t nPkt);
-  /**
-   * Enqueue with delay function
-   * \param queue the queue disc
-   * \param size the size
-   * \param nPkt the number of packets
-   */
   void EnqueueWithDelay (Ptr<RedQueueDisc> queue, uint32_t size, uint32_t nPkt);
-  /**
-   * Run ARED queue disc test function
-   * \param mode the test mode
-   */
-  void RunAredDiscTest (QueueSizeUnit mode);
+  void RunAredDiscTest (StringValue mode);
 };
 
 AredQueueDiscTestCase::AredQueueDiscTestCase ()
@@ -129,7 +81,7 @@ AredQueueDiscTestCase::AredQueueDiscTestCase ()
 }
 
 void
-AredQueueDiscTestCase::RunAredDiscTest (QueueSizeUnit mode)
+AredQueueDiscTestCase::RunAredDiscTest (StringValue mode)
 {
   uint32_t pktSize = 0;
   uint32_t modeSize = 1;  // 1 for packets; pktSize for bytes
@@ -140,8 +92,10 @@ AredQueueDiscTestCase::RunAredDiscTest (QueueSizeUnit mode)
 
   // test 1: Verify automatic setting of QW. [QW = 0.0 with default LinkBandwidth]
   Ptr<RedQueueDisc> queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
 
-  if (mode == QueueSizeUnit::BYTES)
+  if (queue->GetMode () == Queue::QUEUE_MODE_BYTES)
     {
       pktSize = 500;
       modeSize = pktSize;
@@ -154,150 +108,160 @@ AredQueueDiscTestCase::RunAredDiscTest (QueueSizeUnit mode)
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (0.0)), true,
                          "Verify that we can actually set the attribute QW");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  QueueDisc::Stats st = queue->GetStats ();
-  NS_TEST_EXPECT_MSG_EQ (st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP), 0,
-                         "There should be zero unforced drops");
+  RedQueueDisc::Stats st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  NS_TEST_EXPECT_MSG_EQ (st.unforcedDrop, 0, "There should be zero unforced drops");
 
 
   // test 2: Verify automatic setting of QW. [QW = 0.0 with lesser LinkBandwidth]
   queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (0.0)), true,
                          "Verify that we can actually set the attribute QW");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("LinkBandwidth", DataRateValue (DataRate ("0.015Mbps"))), true,
                          "Verify that we can actually set the attribute LinkBandwidth");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = queue->GetStats ();
-  NS_TEST_EXPECT_MSG_NE (st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP), 0,
-                         "There should be some unforced drops");
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  NS_TEST_EXPECT_MSG_NE (st.unforcedDrop, 0, "There should be some unforced drops");
 
 
   // test 3: Verify automatic setting of QW. [QW = -1.0 with default LinkBandwidth]
   queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (-1.0)), true,
                          "Verify that we can actually set the attribute QW");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = queue->GetStats ();
-  NS_TEST_EXPECT_MSG_EQ (st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP), 0,
-                         "There should be zero unforced drops");
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  NS_TEST_EXPECT_MSG_EQ (st.unforcedDrop, 0, "There should be zero unforced drops");
 
 
   // test 4: Verify automatic setting of QW. [QW = -1.0 with lesser LinkBandwidth]
   queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (-1.0)), true,
                          "Verify that we can actually set the attribute QW");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("LinkBandwidth", DataRateValue (DataRate ("0.015Mbps"))), true,
                          "Verify that we can actually set the attribute LinkBandwidth");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = queue->GetStats ();
-  NS_TEST_EXPECT_MSG_NE (st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP), 0,
-                         "There should be some unforced drops");
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  NS_TEST_EXPECT_MSG_NE (st.unforcedDrop, 0, "There should be some unforced drops");
 
 
   // test 5: Verify automatic setting of QW. [QW = -2.0 with default LinkBandwidth]
   queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (-2.0)), true,
                          "Verify that we can actually set the attribute QW");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = queue->GetStats ();
-  uint32_t test5 = st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP);
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  uint32_t test5 = st.unforcedDrop;
   NS_TEST_EXPECT_MSG_NE (test5, 0, "There should be some unforced drops");
 
 
   // test 6: Verify automatic setting of QW. [QW = -2.0 with lesser LinkBandwidth]
   queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (-2.0)), true,
                          "Verify that we can actually set the attribute QW");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("LinkBandwidth", DataRateValue (DataRate ("0.015Mbps"))), true,
                          "Verify that we can actually set the attribute LinkBandwidth");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = queue->GetStats ();
-  uint32_t test6 = st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP);
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  uint32_t test6 = st.unforcedDrop;
   NS_TEST_EXPECT_MSG_NE (test6, test5, "Test 6 should have more unforced drops than Test 5");
 
 
   // test 7: Verify automatic setting of minTh and maxTh. [minTh = maxTh = 0.0, with default LinkBandwidth]
   queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (0.0)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (0.0)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = queue->GetStats ();
-  NS_TEST_EXPECT_MSG_NE (st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP), 0,
-                         "There should be some unforced drops");
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  NS_TEST_EXPECT_MSG_NE (st.unforcedDrop, 0, "There should be some unforced drops");
 
 
   // test 8: Verify automatic setting of minTh and maxTh. [minTh = maxTh = 0.0, with higher LinkBandwidth]
   queue = CreateObject<RedQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (0.0)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (0.0)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("LinkBandwidth", DataRateValue (DataRate ("150Mbps"))), true,
                          "Verify that we can actually set the attribute LinkBandwidth");
   queue->Initialize ();
   Enqueue (queue, pktSize, 300);
-  st = queue->GetStats ();
-  NS_TEST_EXPECT_MSG_EQ (st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP), 0,
-                         "There should be zero unforced drops");
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  NS_TEST_EXPECT_MSG_EQ (st.unforcedDrop, 0, "There should be zero unforced drops");
 
 
   // test 9: Default RED (automatic and adaptive settings disabled)
   queue = CreateObject<RedQueueDisc> ();
   minTh = 5 * modeSize;
   maxTh = 15 * modeSize;
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinTh", DoubleValue (minTh)), true,
                          "Verify that we can actually set the attribute MinTh");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxTh", DoubleValue (maxTh)), true,
                          "Verify that we can actually set the attribute MaxTh");
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QW", DoubleValue (0.002)), true,
                          "Verify that we can actually set the attribute QW");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("LInterm", DoubleValue (2)), true,
@@ -306,16 +270,17 @@ AredQueueDiscTestCase::RunAredDiscTest (QueueSizeUnit mode)
   EnqueueWithDelay (queue, pktSize, 300);
   Simulator::Stop (Seconds (5));
   Simulator::Run ();
-  st = queue->GetStats ();
-  uint32_t test9 = st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP);
-  NS_TEST_EXPECT_MSG_NE (st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP), 0,
-                         "There should be some unforced drops");
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  uint32_t test9 = st.unforcedDrop;
+  NS_TEST_EXPECT_MSG_NE (st.unforcedDrop, 0, "There should be some unforced drops");
 
 
   // test 10: Adaptive RED (automatic and adaptive settings enabled)
   queue = CreateObject<RedQueueDisc> ();
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, qSize))),
-                         true, "Verify that we can actually set the attribute MaxSize");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("Mode", mode), true,
+                         "Verify that we can actually set the attribute Mode");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("QueueLimit", UintegerValue (qSize)), true,
+                         "Verify that we can actually set the attribute QueueLimit");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("LInterm", DoubleValue (2)), true,
                          "Verify that we can actually set the attribute LInterm");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("ARED", BooleanValue (true)), true,
@@ -324,8 +289,8 @@ AredQueueDiscTestCase::RunAredDiscTest (QueueSizeUnit mode)
   EnqueueWithDelay (queue, pktSize, 300);
   Simulator::Stop (Seconds (5));
   Simulator::Run ();
-  st = queue->GetStats ();
-  uint32_t test10 = st.GetNDroppedPackets (RedQueueDisc::UNFORCED_DROP);
+  st = StaticCast<RedQueueDisc> (queue)->GetStats ();
+  uint32_t test10 = st.unforcedDrop;
   NS_TEST_EXPECT_MSG_LT (test10, test9, "Test 10 should have less unforced drops than test 9");
 }
 
@@ -335,7 +300,7 @@ AredQueueDiscTestCase::Enqueue (Ptr<RedQueueDisc> queue, uint32_t size, uint32_t
   Address dest;
   for (uint32_t i = 0; i < nPkt; i++)
     {
-      queue->Enqueue (Create<AredQueueDiscTestItem> (Create<Packet> (size), dest));
+      queue->Enqueue (Create<AredQueueDiscTestItem> (Create<Packet> (size), dest, 0));
     }
 }
 
@@ -353,17 +318,11 @@ AredQueueDiscTestCase::EnqueueWithDelay (Ptr<RedQueueDisc> queue, uint32_t size,
 void
 AredQueueDiscTestCase::DoRun (void)
 {
-  RunAredDiscTest (QueueSizeUnit::PACKETS);
-  RunAredDiscTest (QueueSizeUnit::BYTES);
+  RunAredDiscTest (StringValue ("QUEUE_MODE_PACKETS"));
+  RunAredDiscTest (StringValue ("QUEUE_MODE_BYTES"));
   Simulator::Destroy ();
 }
 
-/**
- * \ingroup traffic-control-test
- * \ingroup tests
- *
- * \brief Ared Queue Disc Test Suite
- */
 static class AredQueueDiscTestSuite : public TestSuite
 {
 public:
@@ -372,4 +331,4 @@ public:
   {
     AddTestCase (new AredQueueDiscTestCase (), TestCase::QUICK);
   }
-} g_aredQueueDiscTestSuite; ///< the test suite
+} g_aredQueueDiscTestSuite;

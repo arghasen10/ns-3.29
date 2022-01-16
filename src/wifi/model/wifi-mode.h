@@ -103,7 +103,7 @@ public:
    * \param channelWidth the considered channel width in MHz
    * \param nss the considered number of streams
    */
-  bool IsAllowed (uint16_t channelWidth, uint8_t nss) const;
+  bool IsAllowed (uint8_t channelWidth, uint8_t nss) const;
   /**
    *
    * \param channelWidth the considered channel width in MHz
@@ -115,7 +115,7 @@ public:
    * If a transmission mode uses 1/2 FEC, and if its
    * data rate is 3.25Mbps, the phy rate is 6.5Mbps
    */
-  uint64_t GetPhyRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss) const;
+  uint64_t GetPhyRate (uint8_t channelWidth, uint16_t guardInterval, uint8_t nss) const;
   /**
    * \param txVector the WifiTxVector of the signal
    *
@@ -133,19 +133,19 @@ public:
    *
    * \returns the data bit rate of this signal.
    */
-  uint64_t GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss) const;
+  uint64_t GetDataRate (uint8_t channelWidth, uint16_t guardInterval, uint8_t nss) const;
   /**
    * \param txVector the WifiTxVector of the signal
    *
    * \returns the data bit rate of this signal.
    */
   uint64_t GetDataRate (WifiTxVector txVector) const;
-  /**
+  /*
    * \param channelWidth the considered channel width in MHz
    *
    * \returns the data bit rate of this non-HT or non-VHT signal.
   */
-  uint64_t GetDataRate (uint16_t channelWidth) const;
+  uint64_t GetDataRate (uint8_t channelWidth) const;
 
   /**
    * \returns the coding rate of this transmission mode
@@ -193,13 +193,11 @@ public:
    */
   uint64_t GetNonHtReferenceRate (void) const;
   /**
-   * \param mode wifi mode
    * \returns true if this WifiMode has a
    * a code rate strictly higher than mode.
    */
   bool IsHigherCodeRate (WifiMode mode) const;
   /**
-   * \param mode wifi mode
    * \returns true if this WifiMode has a
    * a rate strictly higher than mode.
    */
@@ -222,9 +220,7 @@ public:
 
 
 private:
-  /// allow WifiModeFactory class access
   friend class WifiModeFactory;
-  /// allow WifiPhyTag class access
   friend class WifiPhyTag; // access the UID-based constructor
   /**
    * Create a WifiMode from a given unique ID.
@@ -232,12 +228,10 @@ private:
    * \param uid unique ID
    */
   WifiMode (uint32_t uid);
-  uint32_t m_uid; ///< UID
+  uint32_t m_uid;
 };
 
-/// equality operator
 bool operator == (const WifiMode &a, const WifiMode &b);
-bool operator < (const WifiMode &a, const WifiMode &b);
 std::ostream & operator << (std::ostream & os, const WifiMode &mode);
 std::istream & operator >> (std::istream &is, WifiMode &mode);
 
@@ -266,7 +260,7 @@ class WifiModeFactory
 public:
   /**
    * \param uniqueName the name of the associated WifiMode. This name
-   *        must be unique across _all_ instances.
+   *        must be unique accross _all_ instances.
    * \param modClass the class of modulation
    * \param isMandatory true if this WifiMode is mandatory, false otherwise.
    * \param codingRate if convolutional coding is used for this rate
@@ -288,7 +282,7 @@ public:
 
   /**
    * \param uniqueName the name of the associated WifiMode. This name
-   *        must be unique across _all_ instances.
+   *        must be unique accross _all_ instances.
    * \param mcsValue the mcs value
    * \param modClass the class of modulation
    *
@@ -302,7 +296,6 @@ public:
 
 
 private:
-  /// allow WifiMode class access
   friend class WifiMode;
   friend std::istream & operator >> (std::istream &is, WifiMode &mode);
 
@@ -321,12 +314,12 @@ private:
    */
   struct WifiModeItem
   {
-    std::string uniqueUid; ///< unique UID
-    WifiModulationClass modClass; ///< modulation class
-    uint16_t constellationSize; ///< constellation size
-    WifiCodeRate codingRate; ///< coding rate
-    bool isMandatory; ///< flag to indicate whether this mode is mandatory
-    uint8_t mcsValue; ///< MCS value
+    std::string uniqueUid;
+    WifiModulationClass modClass;
+    uint16_t constellationSize;
+    WifiCodeRate codingRate;
+    bool isMandatory;
+    uint8_t mcsValue;
   };
 
   /**
@@ -358,7 +351,7 @@ private:
    * typedef for a vector of WifiModeItem.
    */
   typedef std::vector<WifiModeItem> WifiModeItemList;
-  WifiModeItemList m_itemList; ///< item list
+  WifiModeItemList m_itemList;
 };
 
 } //namespace ns3

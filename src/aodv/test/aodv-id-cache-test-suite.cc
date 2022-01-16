@@ -28,39 +28,27 @@
 #include "ns3/aodv-id-cache.h"
 #include "ns3/test.h"
 
-namespace ns3 {
-namespace aodv {
+namespace ns3
+{
+namespace aodv
+{
 
-/**
- * \ingroup aodv
- * \defgroup aodv-test AODV module tests
- */
-
-
-/**
- * \ingroup aodv-test
- * \ingroup tests
- *
- * \brief Unit test for id cache
- */
+//-----------------------------------------------------------------------------
+// Tests
+//-----------------------------------------------------------------------------
+/// Unit test for id cache
 class IdCacheTest : public TestCase
 {
 public:
-  IdCacheTest () : TestCase ("Id Cache"),
-                   cache (Seconds (10))
-  {
-  }
+  IdCacheTest () : TestCase ("Id Cache"), cache (Seconds (10))
+  {}
   virtual void DoRun ();
 
 private:
-  /// Timeout test function #1
   void CheckTimeout1 ();
-  /// Timeout test function #2
   void CheckTimeout2 ();
-  /// Timeout test function #3
   void CheckTimeout3 ();
 
-  /// ID cache
   IdCache cache;
 };
 
@@ -104,13 +92,7 @@ IdCacheTest::CheckTimeout3 ()
 {
   NS_TEST_EXPECT_MSG_EQ (cache.GetSize (), 0, "All records expire");
 }
-
-/**
- * \ingroup aodv-test
- * \ingroup tests
- *
- * \brief Id Cache Test Suite
- */
+//-----------------------------------------------------------------------------
 class IdCacheTestSuite : public TestSuite
 {
 public:
@@ -118,7 +100,7 @@ public:
   {
     AddTestCase (new IdCacheTest, TestCase::QUICK);
   }
-} g_idCacheTestSuite; ///< the test suite
+} g_idCacheTestSuite;
 
-}  // namespace aodv
-}  // namespace ns3
+}
+}

@@ -15,8 +15,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Author: Pavel Boyko <boyko@iitp.ru>
- *
+ * Authors: Pavel Boyko <boyko@iitp.ru>
+ */
+
+/*
  * Classical hidden terminal problem and its RTS/CTS solution.
  *
  * Topology: [node 0] <-- -50 dB --> [node 1] <-- -50 dB --> [node 2]
@@ -28,27 +30,18 @@
  *  - IP flow monitor
  */
 
-#include "ns3/command-line.h"
-#include "ns3/config.h"
-#include "ns3/uinteger.h"
-#include "ns3/boolean.h"
-#include "ns3/string.h"
-#include "ns3/yans-wifi-helper.h"
-#include "ns3/internet-stack-helper.h"
-#include "ns3/ipv4-address-helper.h"
-#include "ns3/udp-echo-helper.h"
-#include "ns3/yans-wifi-channel.h"
-#include "ns3/constant-position-mobility-model.h"
-#include "ns3/propagation-loss-model.h"
-#include "ns3/propagation-delay-model.h"
-#include "ns3/on-off-helper.h"
-#include "ns3/flow-monitor-helper.h"
-#include "ns3/ipv4-flow-classifier.h"
+#include "ns3/core-module.h"
+#include "ns3/propagation-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/flow-monitor-module.h"
+#include "ns3/wifi-module.h"
 
 using namespace ns3;
 
-/// Run single 10 seconds experiment
-void experiment (bool enableCtsRts, std::string wifiManager)
+/// Run single 10 seconds experiment with enabled or disabled RTS/CTS mechanism
+void experiment (bool enableCtsRts)
 {
   // 0. Enable or disable CTS/RTS
   UintegerValue ctsThr = (enableCtsRts ? UintegerValue (100) : UintegerValue (2200));
@@ -59,7 +52,7 @@ void experiment (bool enableCtsRts, std::string wifiManager)
   nodes.Create (3);
 
   // 2. Place nodes somehow, this is required by every wireless simulation
-  for (uint8_t i = 0; i < 3; ++i)
+  for (size_t i = 0; i < 3; ++i)
     {
       nodes.Get (i)->AggregateObject (CreateObject<ConstantPositionMobilityModel> ());
     }
@@ -78,7 +71,9 @@ void experiment (bool enableCtsRts, std::string wifiManager)
   // 5. Install wireless devices
   WifiHelper wifi;
   wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
-  wifi.SetRemoteStationManager ("ns3::" + wifiManager + "WifiManager");
+  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                                "DataMode",StringValue ("DsssRate2Mbps"),
+                                "ControlMode",StringValue ("DsssRate1Mbps"));
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   wifiPhy.SetChannel (wifiChannel);
   WifiMacHelper wifiMac;
@@ -179,16 +174,14 @@ void experiment (bool enableCtsRts, std::string wifiManager)
 
 int main (int argc, char **argv)
 {
-  std::string wifiManager ("Arf");
   CommandLine cmd;
-  cmd.AddValue ("wifiManager", "Set wifi rate manager (Aarf, Aarfcd, Amrr, Arf, Cara, Ideal, Minstrel, Onoe, Rraa)", wifiManager);
   cmd.Parse (argc, argv);
 
   std::cout << "Hidden station experiment with RTS/CTS disabled:\n" << std::flush;
-  experiment (false, wifiManager);
+  experiment (false);
   std::cout << "------------------------------------------------\n";
   std::cout << "Hidden station experiment with RTS/CTS enabled:\n";
-  experiment (true, wifiManager);
+  experiment (true);
 
   return 0;
 }

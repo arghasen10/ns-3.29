@@ -40,7 +40,7 @@ TypeId RemoteChannelBundle::GetTypeId (void)
 }
 
 RemoteChannelBundle::RemoteChannelBundle ()
-  : m_remoteSystemId (UINT32_MAX),
+  : m_remoteSystemId (-1),
     m_guaranteeTime (0),
     m_delay (NS_TIME_INFINITY)
 {
@@ -98,7 +98,7 @@ RemoteChannelBundle::GetEventId (void) const
   return m_nullEventId;
 }
 
-std::size_t
+int
 RemoteChannelBundle::GetSize (void) const
 {
   return m_channels.size ();

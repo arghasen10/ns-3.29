@@ -71,7 +71,6 @@ class Packet;
  */
 class UeManager : public Object
 {
-  /// allow LtePdcpSpecificLtePdcpSapUser<UeManager> class friend access
   friend class LtePdcpSpecificLtePdcpSapUser<UeManager>;
 
 public:
@@ -93,6 +92,8 @@ public:
     HANDOVER_JOINING,
     HANDOVER_PATH_SWITCH,
     HANDOVER_LEAVING,
+    CONNECTION_SUSPEND,
+    CONNECTION_PSM,
     NUM_STATES
   };
 
@@ -104,11 +105,10 @@ public:
    * \param rrc pointer to the LteEnbRrc holding this UeManager
    * \param rnti RNTI of the UE
    * \param s initial state of the UeManager
-   * \param componentCarrierId primary component carrier ID
    * 
    * \return 
    */
-  UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s, uint8_t componentCarrierId);
+  UeManager (Ptr<LteEnbRrc> rrc, uint16_t rnti, State s);
 
   virtual ~UeManager (void);
 
@@ -178,6 +178,12 @@ public:
    * 
    */
   void ScheduleRrcConnectionReconfiguration ();
+
+  void SendRrcRelease(uint16_t rnti);
+
+  void SendPage(uint16_t rnti);
+
+  void SwitchtoDRXPSMState();
 
   /** 
    * Start the handover preparation and send the handover request
@@ -322,12 +328,6 @@ public:
    */
   uint64_t GetImsi (void) const;
 
-  /**
-   *
-   * \return the primary component carrier ID
-   */
-  uint8_t GetComponentCarrierId () const;
-
   /** 
    * 
    * \return the SRS Configuration Index
@@ -367,7 +367,8 @@ public:
   typedef void (*StateTracedCallback)
     (const uint64_t imsi, const uint16_t cellId, const uint16_t rnti,
     const State oldState, const State newState);
-
+  /// The current UeManager state.
+  State m_state;
 private:
 
   /** 
@@ -469,6 +470,8 @@ private:
    */
   void SwitchToState (State s);
 
+
+
   uint8_t m_lastAllocatedDrbid; ///< last allocated Data Radio Bearer ID
 
   /**
@@ -490,23 +493,22 @@ private:
    * The `C-RNTI` attribute. Cell Radio Network Temporary Identifier.
    */
   uint16_t m_rnti;
+
+  uint16_t m_rrcreleaseinterval;
+
+  bool m_enablePSM;
   /**
    * International Mobile Subscriber Identity assigned to this UE. A globally
    * unique UE identifier.
    */
   uint64_t m_imsi;
-  /**
-   * ID of the primary CC for this UE
-   */
-  uint8_t m_componentCarrierId;
-  
-  uint8_t m_lastRrcTransactionIdentifier; ///< last RRC transaction identifier
-
-  LteRrcSap::PhysicalConfigDedicated m_physicalConfigDedicated; ///< physical config dedicated
+  ///
+  uint8_t m_lastRrcTransactionIdentifier;
+  ///
+  LteRrcSap::PhysicalConfigDedicated m_physicalConfigDedicated;
   /// Pointer to the parent eNodeB RRC.
   Ptr<LteEnbRrc> m_rrc;
-  /// The current UeManager state.
-  State m_state;
+
   
   LtePdcpSapUser* m_drbPdcpSapUser; ///< DRB PDCP SAP user
 
@@ -532,6 +534,8 @@ private:
    * CONNECTION REQUEST is received.
    */
   EventId m_connectionRequestTimeout;
+
+  std::list<EventId> m_rrcRequestTimeout;
   /**
    * Time limit before a _connection setup timeout_ occurs. Set after an RRC
    * CONNECTION SETUP is sent. Calling LteEnbRrc::ConnectionSetupTimeout() when
@@ -564,6 +568,16 @@ private:
 
   /// Pending start data radio bearers
   bool m_pendingStartDataRadioBearers;
+
+  Time m_t3324;
+
+  Time m_t3412;
+
+  Time m_edrx_cycle;
+
+  bool m_datareceived;
+
+  std::list<EventId> id_suspend;
 
 }; // end of `class UeManager`
 
@@ -618,6 +632,13 @@ public:
    * \return the object TypeId
    */
   static TypeId GetTypeId (void);
+
+  /*
+   * todo
+   * Method uses to enable the NB-IoT management mode on the eNB.
+   */
+  void EnableNbIotEnbManager ();
+
 
   /**
    * Set the X2 SAP this RRC should interact with
@@ -836,6 +857,11 @@ public:
 
   /**
    * \brief Configure cell-specific parameters.
+   * \param ulBandwidth the uplink bandwidth in number of RB
+   * \param dlBandwidth the downlink bandwidth in number of RB
+   * \param ulEarfcn the UL EARFCN
+   * \param dlEarfcn the DL EARFCN
+   * \param cellId the ID of the cell
    *
    * Configure cell-specific parameters and propagate them to lower layers.
    * The parameters include bandwidth, EARFCN (E-UTRA Absolute Radio Frequency
@@ -856,13 +882,9 @@ public:
    *
    * \param ccPhyConf the component carrier configuration
    */
-  void ConfigureCell (std::map<uint8_t, Ptr<ComponentCarrierEnb>> ccPhyConf);
+  void ConfigureCell (uint16_t cellId);
 
-  /**
-   * \brief Configure carriers.
-   * \param ccPhyConf the component carrier configuration
-   */
-  void ConfigureCarriers (std::map<uint8_t, Ptr<ComponentCarrierEnb>> ccPhyConf);
+  void ConfigureCarriers (std::map<uint8_t, ComponentCarrier > ccPhyConf, uint16_t numberOfCarriers);
 
   /** 
    * set the cell id of this eNB
@@ -878,24 +900,6 @@ public:
    * \param ccIndex 
    */
   void SetCellId (uint16_t m_cellId, uint8_t ccIndex);
-
-  /**
-   * convert the cell id to component carrier id
-   *
-   * \param cellId Cell ID
-   *
-   * \return corresponding component carrier id
-   */
-  uint8_t CellToComponentCarrierId (uint16_t cellId);
-
-  /**
-   * convert the component carrier id to cell id
-   *
-   * \param componentCarrierId component carrier ID
-   *
-   * \return corresponding cell ID
-   */
-  uint16_t ComponentCarrierToCellId (uint8_t componentCarrierId);
 
   /** 
    * Enqueue an IP data packet on the proper bearer for downlink
@@ -1158,7 +1162,7 @@ private:
    * \param componentCarrierId ID of the primary component carrier
    * \return temporary RNTI
    */
-  uint16_t DoAllocateTemporaryCellRnti (uint8_t componentCarrierId);
+  uint16_t DoAllocateTemporaryCellRnti ();
   /**
    * Notify LC config result function
    *
@@ -1243,7 +1247,7 @@ private:
    *
    * \return the newly allocated RNTI
    */
-  uint16_t AddUe (UeManager::State state, uint8_t componentCarrierId);
+  uint16_t AddUe (UeManager::State state);
 
   /**
    * remove a UE from the cell
@@ -1373,6 +1377,8 @@ private:
   /// Interface to the eNodeB MAC instance.
   std::vector<LteEnbCmacSapProvider*> m_cmacSapProvider;
 
+  std::vector<Ptr<Packet>> m_packetsaved;
+
   /// Receive API calls from the handover algorithm instance.
   LteHandoverManagementSapUser* m_handoverManagementSapUser;
   /// Interface to the handover algorithm instance.
@@ -1413,6 +1419,8 @@ private:
 
   /// True if ConfigureCell() has been completed.
   bool m_configured;
+  /// Cell identifier. Must be unique across the simulation.
+  uint16_t m_cellId;
   /// Downlink E-UTRA Absolute Radio Frequency Channel Number.
   uint32_t m_dlEarfcn;
   /// Uplink E-UTRA Absolute Radio Frequency Channel Number.
@@ -1425,7 +1433,8 @@ private:
   uint16_t m_lastAllocatedRnti;
 
   /// The System Information Block Type 1 that is currently broadcasted over BCH.
-  std::vector<LteRrcSap::SystemInformationBlockType1> m_sib1;
+  LteRrcSap::SystemInformationBlockType1 m_sib1;
+ NbLteRrcSap::SystemInformationBlockType1Nb m_sib1Nb;
 
   /**
    * The `UeMap` attribute. List of UeManager by C-RNTI.
@@ -1472,10 +1481,25 @@ private:
    * system information.
    */
   Time m_systemInformationPeriodicity;
+
+  int32_t m_t3324_d;
+
+  int64_t m_t3412_d;
+
+  int32_t m_edrx_cycle_d;
+
+  uint16_t m_rrcreleaseinterval_d;
+
+  bool m_enablePSM_d;
+
   /**
    * The `SrsPeriodicity` attribute. The SRS periodicity in milliseconds.
    */
   uint16_t m_srsCurrentPeriodicityId; ///< SRS current periodicity ID
+
+
+
+
   std::set<uint16_t> m_ueSrsConfigurationIndexSet; ///< UE SRS configuration index set
   uint16_t m_lastAllocatedConfigurationIndex; ///< last allocated configuration index
   bool m_reconfigureUes; ///< reconfigure UEs?
@@ -1578,7 +1602,13 @@ private:
 
   bool m_carriersConfigured; ///< are carriers configured
 
-  std::map<uint8_t, Ptr<ComponentCarrierEnb>> m_componentCarrierPhyConf; ///< component carrier phy configuration
+  std::map<uint8_t, ComponentCarrier> m_componentCarrierPhyConf;
+
+  /*
+   * todo
+   * Attribute used by the EnableNbIotEnbManager method to store the NB-IoT management mode on the eNB.
+   */
+  bool m_nbIotActiveMode = false;
 
 }; // end of `class LteEnbRrc`
 

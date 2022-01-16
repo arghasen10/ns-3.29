@@ -19,6 +19,7 @@
  */
 
 #include "ns3/log.h"
+#include "ns3/queue.h"
 #include "ns3/simulator.h"
 #include "ns3/enum.h"
 #include "ns3/boolean.h"

@@ -26,6 +26,8 @@
 #include <ns3/ptr.h>
 
 #include <ns3/lte-rrc-sap.h>
+#include <ns3/nb-lte-rrc-sap.h>
+//#include <ns3/lte-enb-phy.h>
 
 namespace ns3 {
 
@@ -73,7 +75,7 @@ public:
   virtual void AddUe (uint16_t rnti) = 0;
 
   /** 
-   * Remove an UE from the cell
+   * Remove an UE from the the cell
    * 
    * \param rnti the UE id relative to this cell
    */
@@ -107,15 +109,34 @@ public:
 
   /**
    *
+   * \param mib-nb the Master Information Block Narrow Band to be sent on the NPBCH
+   */
+  virtual void SetMasterInformationBlockNb (NbLteRrcSap::MasterInformationBlockNb mibNb) = 0;
+
+
+  /**
+   *
    * \param sib1 the System Information Block Type 1 to be sent on the BCH
    */
   virtual void SetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockType1 sib1) = 0;
+
+  /**
+    *
+    * \param sib1-nb the System Information Block Type 1 Narrow Band to be sent on the NPDSCH
+    */
+   virtual void SetSystemInformationBlockType1Nb (NbLteRrcSap::SystemInformationBlockType1Nb sib1Nb) = 0;
+
+
 
   /**
    *
    * \return Reference Signal Power for SIB2
    */
   virtual int8_t GetReferenceSignalPower () = 0;
+
+  virtual void UpdatePagingParam() = 0;
+
+
 };
 
 
@@ -164,6 +185,13 @@ public:
   virtual void SetSrsConfigurationIndex (uint16_t  rnti, uint16_t srsCi);
   virtual void SetMasterInformationBlock (LteRrcSap::MasterInformationBlock mib);
   virtual void SetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockType1 sib1);
+  virtual void UpdatePagingParam();
+  /*
+   * NB-IoT methods
+   */
+  virtual void SetMasterInformationBlockNb (NbLteRrcSap::MasterInformationBlockNb mibNb); // Used by NB-IoT. 3GPP Release 13.
+  virtual void SetSystemInformationBlockType1Nb (NbLteRrcSap::SystemInformationBlockType1Nb sib1Nb); // Used by NB-IoT. 3GPP Release 13.
+
   virtual int8_t GetReferenceSignalPower ();
   
 private:
@@ -252,6 +280,31 @@ MemberLteEnbCphySapProvider<C>::SetSystemInformationBlockType1 (LteRrcSap::Syste
 {
   m_owner->DoSetSystemInformationBlockType1 (sib1);
 }
+
+template <class C>
+void
+MemberLteEnbCphySapProvider<C>::UpdatePagingParam (void)
+{
+  m_owner->DoUpdatePagingParam ();
+}
+
+
+///   START NB-IoT METHODS
+template <class C>
+void
+MemberLteEnbCphySapProvider<C>::SetMasterInformationBlockNb (NbLteRrcSap::MasterInformationBlockNb mibNb) // Used by NB-IoT. 3GPP Release 13.
+{
+  m_owner->DoSetMasterInformationBlockNb (mibNb);
+}
+
+template <class C>
+void
+MemberLteEnbCphySapProvider<C>::SetSystemInformationBlockType1Nb (NbLteRrcSap::SystemInformationBlockType1Nb sib1Nb) // Used by NB-IoT. 3GPP Release 13.
+{
+  m_owner->DoSetSystemInformationBlockType1Nb (sib1Nb);
+}
+///   END NB-IoT METHODS
+
 
 template <class C>
 int8_t

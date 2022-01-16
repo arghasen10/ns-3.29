@@ -170,14 +170,13 @@ protected:
 
 private:
   /**
-   * Create a single component carrier.
-   *
-   * \param ulBandwidth uplink bandwidth for the current CC
-   * \param dlBandwidth downlink bandwidth for the current CC
-   * \param ulEarfcn uplink EARFCN - not control on the validity at this point
-   * \param dlEarfcn downlink EARFCN - not control on the validity at this point	
-   * \param isPrimary identify if this is the Primary Component Carrier (PCC) - only one PCC is allowed 
-   * \return the component carrier
+   * Create an single component carrier map
+   * \param ulBw uplink bandwidth for the current CC
+   * \param dlBw downlink bandwidth for the current CC
+   * \param ulFreq uplink EARFCN - not control on the validity at this point
+   * \param dlFreq downlink EARFCN - not control on the validity at this point	
+   * \param pc - this identify if this is the Primary Component Carrier (PCC) - only one PCC is allowed 
+   * \return pointer to the created object
    */
   ComponentCarrier CreateSingleCc (uint16_t ulBandwidth, uint16_t dlBandwidth, uint32_t ulEarfcn, uint32_t dlEarfcn, bool isPrimary);
 

@@ -25,12 +25,6 @@
 using namespace ns3;
 using namespace olsr;
 
-/**
- * \ingroup olsr-test
- * \ingroup tests
- *
- * Various olsr regression tests
- */
 class RegressionTestSuite : public TestSuite
 {
 public:
@@ -41,7 +35,4 @@ public:
     AddTestCase (new TcRegressionTest, TestCase::QUICK);
     AddTestCase (new Bug780Test, TestCase::QUICK);
   }
-};
-
-static RegressionTestSuite g_olsrRegressionTestSuite; //!< Static variable for test initialization
-
+} g_olsrRegressionTestSuite;

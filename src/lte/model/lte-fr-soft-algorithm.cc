@@ -29,7 +29,6 @@ NS_LOG_COMPONENT_DEFINE ("LteFrSoftAlgorithm");
 
 NS_OBJECT_ENSURE_REGISTERED (LteFrSoftAlgorithm);
 
-/// FrSoftDownlinkDefaultConfiguration structure
 static const struct FrSoftDownlinkDefaultConfiguration
 {
   uint8_t cellId; ///< cell ID
@@ -52,9 +51,8 @@ static const struct FrSoftDownlinkDefaultConfiguration
   { 1, 100, 0, 32},
   { 2, 100, 32, 32},
   { 3, 100, 64, 36}
-}; ///< soft downlink default configuration
+};
 
-/// soft uplink default configuration
 static const struct FrSoftUplinkDefaultConfiguration
 {
   uint8_t cellId; ///< cell ID
@@ -77,11 +75,9 @@ static const struct FrSoftUplinkDefaultConfiguration
   { 1, 100, 0, 32},
   { 2, 100, 32, 32},
   { 3, 100, 64, 36}
-}; ///< soft uplink default configuration
+};
 
-/** \returns number of downlink configurations */
 const uint16_t NUM_DOWNLINK_CONFS (sizeof (g_frSoftDownlinkDefaultConfiguration) / sizeof (FrSoftDownlinkDefaultConfiguration));
-/** \returns number of uplink configurations */
 const uint16_t NUM_UPLINK_CONFS (sizeof (g_frSoftUplinkDefaultConfiguration) / sizeof (FrSoftUplinkDefaultConfiguration));
 
 

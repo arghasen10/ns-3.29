@@ -19,10 +19,9 @@
  *          Sébastien Deronne <sebastien.deronne@gmail.com>
  */
 
-#include "ns3/log.h"
 #include "nist-error-rate-model.h"
-#include "dsss-error-rate-model.h"
 #include "wifi-phy.h"
+#include "ns3/log.h"
 
 namespace ns3 {
 
@@ -106,7 +105,7 @@ NistErrorRateModel::Get1024QamBer (double snr) const
 }
 
 double
-NistErrorRateModel::GetFecBpskBer (double snr, uint64_t nbits,
+NistErrorRateModel::GetFecBpskBer (double snr, uint32_t nbits,
                                    uint32_t bValue) const
 {
   NS_LOG_FUNCTION (this << snr << nbits << bValue);
@@ -117,12 +116,12 @@ NistErrorRateModel::GetFecBpskBer (double snr, uint64_t nbits,
     }
   double pe = CalculatePe (ber, bValue);
   pe = std::min (pe, 1.0);
-  double pms = std::pow (1 - pe, nbits);
+  double pms = std::pow (1 - pe, (double)nbits);
   return pms;
 }
 
 double
-NistErrorRateModel::GetFecQpskBer (double snr, uint64_t nbits,
+NistErrorRateModel::GetFecQpskBer (double snr, uint32_t nbits,
                                    uint32_t bValue) const
 {
   NS_LOG_FUNCTION (this << snr << nbits << bValue);
@@ -133,7 +132,7 @@ NistErrorRateModel::GetFecQpskBer (double snr, uint64_t nbits,
     }
   double pe = CalculatePe (ber, bValue);
   pe = std::min (pe, 1.0);
-  double pms = std::pow (1 - pe, nbits);
+  double pms = std::pow (1 - pe, (double)nbits);
   return pms;
 }
 
@@ -210,7 +209,7 @@ NistErrorRateModel::CalculatePe (double p, uint32_t bValue) const
 }
 
 double
-NistErrorRateModel::GetFec16QamBer (double snr, uint64_t nbits,
+NistErrorRateModel::GetFec16QamBer (double snr, uint32_t nbits,
                                     uint32_t bValue) const
 {
   NS_LOG_FUNCTION (this << snr << nbits << bValue);
@@ -221,12 +220,12 @@ NistErrorRateModel::GetFec16QamBer (double snr, uint64_t nbits,
     }
   double pe = CalculatePe (ber, bValue);
   pe = std::min (pe, 1.0);
-  double pms = std::pow (1 - pe, nbits);
+  double pms = std::pow (1 - pe, static_cast<double> (nbits));
   return pms;
 }
 
 double
-NistErrorRateModel::GetFec64QamBer (double snr, uint64_t nbits,
+NistErrorRateModel::GetFec64QamBer (double snr, uint32_t nbits,
                                     uint32_t bValue) const
 {
   NS_LOG_FUNCTION (this << snr << nbits << bValue);
@@ -237,12 +236,12 @@ NistErrorRateModel::GetFec64QamBer (double snr, uint64_t nbits,
     }
   double pe = CalculatePe (ber, bValue);
   pe = std::min (pe, 1.0);
-  double pms = std::pow (1 - pe, nbits);
+  double pms = std::pow (1 - pe, static_cast<double> (nbits));
   return pms;
 }
 
 double
-NistErrorRateModel::GetFec256QamBer (double snr, uint64_t nbits,
+NistErrorRateModel::GetFec256QamBer (double snr, uint32_t nbits,
                                      uint32_t bValue) const
 {
   NS_LOG_FUNCTION (this << snr << nbits << bValue);
@@ -253,12 +252,12 @@ NistErrorRateModel::GetFec256QamBer (double snr, uint64_t nbits,
     }
   double pe = CalculatePe (ber, bValue);
   pe = std::min (pe, 1.0);
-  double pms = std::pow (1 - pe, nbits);
+  double pms = std::pow (1 - pe, static_cast<double> (nbits));
   return pms;
 }
 
 double
-NistErrorRateModel::GetFec1024QamBer (double snr, uint64_t nbits,
+NistErrorRateModel::GetFec1024QamBer (double snr, uint32_t nbits,
                                       uint32_t bValue) const
 {
   NS_LOG_FUNCTION (this << snr << nbits << bValue);
@@ -269,12 +268,12 @@ NistErrorRateModel::GetFec1024QamBer (double snr, uint64_t nbits,
     }
   double pe = CalculatePe (ber, bValue);
   pe = std::min (pe, 1.0);
-  double pms = std::pow (1 - pe, nbits);
+  double pms = std::pow (1 - pe, static_cast<double> (nbits));
   return pms;
 }
 
 double
-NistErrorRateModel::GetChunkSuccessRate (WifiMode mode, WifiTxVector txVector, double snr, uint64_t nbits) const
+NistErrorRateModel::GetChunkSuccessRate (WifiMode mode, WifiTxVector txVector, double snr, uint32_t nbits) const
 {
   NS_LOG_FUNCTION (this << mode << txVector.GetMode () << snr << nbits);
   if (mode.GetModulationClass () == WIFI_MOD_CLASS_ERP_OFDM

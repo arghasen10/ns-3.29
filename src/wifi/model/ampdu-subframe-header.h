@@ -27,6 +27,8 @@ namespace ns3 {
 
 /**
  * \ingroup wifi
+ *
+ *
  */
 class AmpduSubframeHeader : public Header
 {
@@ -34,18 +36,25 @@ public:
   AmpduSubframeHeader ();
   virtual ~AmpduSubframeHeader ();
 
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
+  virtual TypeId GetInstanceTypeId (void) const;
+  virtual void Print (std::ostream &os) const;
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (Buffer::Iterator start) const;
+  virtual uint32_t Deserialize (Buffer::Iterator start);
 
-  TypeId GetInstanceTypeId (void) const;
-  void Print (std::ostream &os) const;
-  uint32_t GetSerializedSize (void) const;
-  void Serialize (Buffer::Iterator start) const;
-  uint32_t Deserialize (Buffer::Iterator start);
-
+  /**
+   * Set the CRC field.
+   *
+   * \param crc
+   */
+  void SetCrc (uint8_t crc);
+  /**
+   * Set the SIG field.
+   *
+   * \param crc
+   */
+  void SetSig ();
   /**
    * Set the length field.
    *
@@ -59,6 +68,18 @@ public:
   */
   void SetEof (bool eof);
   /**
+   * Return the CRC field.
+   *
+   * \return the CRC field
+   */
+  uint8_t GetCrc (void) const;
+  /**
+   * Return the SIG field.
+   *
+   * \return the SIG field
+   */
+  uint8_t GetSig (void) const;
+  /**
    * Return the length field.
    *
    * \return the length field
@@ -71,7 +92,9 @@ public:
    */
   bool GetEof (void) const;
 
-private:
+protected:
+  uint8_t m_crc;     //!< CRC field
+  uint8_t m_sig;     //!< SIG field
   uint16_t m_length; //!< length field
   bool m_eof;        //!< EOF field
 };

@@ -25,6 +25,7 @@
  */
 
 #include "tcp-yeah.h"
+#include "ns3/tcp-socket-base.h"
 #include "ns3/log.h"
 
 namespace ns3 {
@@ -86,7 +87,7 @@ TcpYeah::TcpYeah (void)
     m_rho (16),
     m_zeta (50),
     m_stcpAiFactor (100),
-    m_stcp (nullptr),
+    m_stcp (0),
     m_baseRtt (Time::Max ()),
     m_minRtt (Time::Max ()),
     m_cntRtt (0),
@@ -99,7 +100,7 @@ TcpYeah::TcpYeah (void)
 {
   NS_LOG_FUNCTION (this);
   m_stcp = CreateObject <TcpScalable> ();
-  m_stcp->SetAttribute ("AIFactor", static_cast<UintegerValue> (m_stcpAiFactor));
+  m_stcp->SetAttribute ("AIFactor", (UintegerValue) m_stcpAiFactor);
 }
 
 TcpYeah::TcpYeah (const TcpYeah& sock)
@@ -243,7 +244,7 @@ TcpYeah::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 
           // queue = rttQueue * bw = rttQueue * (cwnd/RTTmin)
           double bw = segCwnd / m_minRtt.GetSeconds ();
-          uint32_t queue = static_cast<uint32_t> (bw * rttQueue.GetSeconds ());
+          uint32_t queue = bw * rttQueue.GetSeconds ();
           NS_LOG_DEBUG ("Queue backlog = " << queue <<
                         " given by cwnd = " << segCwnd <<
                         ", minRtt = " << m_minRtt.GetMilliSeconds () <<
@@ -271,7 +272,7 @@ TcpYeah::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 
               if (m_renoCount <= 2)
                 {
-                  m_renoCount = std::max (segCwnd >> 1, static_cast<uint32_t> (2));
+                  m_renoCount = std::max (segCwnd >> 1, (uint32_t) 2);
                 }
               else
                 {
@@ -325,23 +326,20 @@ TcpYeah::GetSsThresh (Ptr<const TcpSocketState> tcb,
       NS_LOG_LOGIC ("Not competing with Reno flows upon loss");
       reduction = m_lastQ;
       reduction = std::max (reduction, segBytesInFlight >> m_delta);
-      reduction = std::min (reduction, std::max (segBytesInFlight >> 1, 2U));
+      reduction = std::min (reduction, std::max (segBytesInFlight >> 1, (uint32_t) 2));
     }
   else
     { // Competing with Reno flows
       NS_LOG_LOGIC ("Competing with Reno flows upon loss");
-      reduction = std::max (segBytesInFlight >> 1, static_cast<uint32_t> (2));
+      reduction = std::max (segBytesInFlight >> 1, (uint32_t) 2);
     }
 
   NS_LOG_INFO ("Reduction amount upon loss = " << reduction);
 
   m_fastCount = 0;
-  m_renoCount = std::max (m_renoCount >> 1, static_cast<uint32_t> (2));
+  m_renoCount = std::max (m_renoCount >> 1, (uint32_t) 2);
 
-  // Allow, at least, 2 segment to go out
-  uint32_t ret = std::max (bytesInFlight - (reduction * tcb->m_segmentSize),
-                           2U * tcb->m_segmentSize);
-  return ret;
+  return (bytesInFlight - (reduction * tcb->m_segmentSize));
 }
 
 } // namespace ns3

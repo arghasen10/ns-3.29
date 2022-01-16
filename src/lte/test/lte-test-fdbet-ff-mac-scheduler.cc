@@ -320,7 +320,7 @@ LenaFdBetFfMacSchedulerTestCase1::DoRun (void)
     }
   /**
   * Check that the assignation is done in a "FD blind equal throughput" manner among users
-  * with equal SINRs: the bandwidth should be distributed according to the 
+  * with equal SINRs: the bandwidht should be distributed according to the 
   * ratio of the estimated throughput per TTI of each user; therefore equally 
   * partitioning the whole bandwidth achievable from a single users in a TTI
   */
@@ -351,11 +351,11 @@ LenaFdBetFfMacSchedulerTestCase2::BuildNameString (uint16_t nUser, std::vector<d
 }
 
 
-LenaFdBetFfMacSchedulerTestCase2::LenaFdBetFfMacSchedulerTestCase2 (std::vector<double> dist, std::vector<uint32_t> achievableRateDl, std::vector<uint32_t> estThrFdBetUl, bool errorModelEnabled)
+LenaFdBetFfMacSchedulerTestCase2::LenaFdBetFfMacSchedulerTestCase2 (std::vector<double> dist, std::vector<uint32_t> estAchievableRateDl, std::vector<uint32_t> estThrFdBetUl, bool errorModelEnabled)
   : TestCase (BuildNameString (dist.size (), dist)),
     m_nUser (dist.size ()),
     m_dist (dist),
-    m_achievableRateDl (achievableRateDl),
+    m_achievableRateDl (estAchievableRateDl),
     m_estThrFdBetUl (estThrFdBetUl),
     m_errorModelEnabled (errorModelEnabled)
 {

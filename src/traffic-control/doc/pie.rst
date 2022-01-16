@@ -47,7 +47,8 @@ Attributes
 
 The key attributes that the PieQueue class holds include the following: 
 
-* ``MaxSize:`` The maximum number of bytes or packets the queue can hold.
+* ``Mode:`` PIE operating mode (BYTES or PACKETS). The default mode is PACKETS. 
+* ``QueueLimit:`` The maximum number of bytes or packets the queue can hold. The default value is 25 bytes / packets.
 * ``MeanPktSize:`` Mean packet size in bytes. The default value is 1000 bytes.
 * ``Tupdate:`` Time period to calculate drop probability. The default value is 30 ms. 
 * ``Supdate:`` Start time of the update timer. The default value is 0 ms. 
@@ -63,7 +64,7 @@ Examples
 The example for PIE is `pie-example.cc` located in ``src/traffic-control/examples``.  To run the file (the first invocation below shows the available
 command-line options):
 
-.. sourcecode:: bash
+:: 
 
    $ ./waf --run "pie-example --PrintHelp"
    $ ./waf --run "pie-example --writePcap=1" 
@@ -83,7 +84,7 @@ The PIE model is tested using :cpp:class:`PieQueueDiscTestSuite` class defined i
 
 The test suite can be run using the following commands: 
 
-.. sourcecode:: bash
+::
 
   $ ./waf configure --enable-examples --enable-tests
   $ ./waf build
@@ -91,7 +92,7 @@ The test suite can be run using the following commands:
 
 or  
 
-.. sourcecode:: bash
+::
 
   $ NS_LOG="PieQueueDisc" ./waf --run "test-runner --suite=pie-queue-disc"
 

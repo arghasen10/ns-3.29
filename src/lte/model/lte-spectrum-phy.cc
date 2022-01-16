@@ -44,15 +44,14 @@ namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("LteSpectrumPhy");
 
 
-/// duration of SRS portion of UL subframe  
-/// = 1 symbol for SRS -1ns as margin to avoid overlapping simulator events
+// duration of SRS portion of UL subframe  
+// = 1 symbol for SRS -1ns as margin to avoid overlapping simulator events
 static const Time UL_SRS_DURATION = NanoSeconds (71429 -1);  
 
-/// duration of the control portion of a subframe
-/// = 0.001 / 14 * 3 (ctrl fixed to 3 symbols) -1ns as margin to avoid overlapping simulator events
+// duration of the control portion of a subframe
+// = 0.001 / 14 * 3 (ctrl fixed to 3 symbols) -1ns as margin to avoid overlapping simulator events
 static const Time DL_CTRL_DURATION = NanoSeconds (214286 -1);
 
-/// Effective coding rate
 static const double EffectiveCodingRate[29] = {
   0.08,
   0.1,
@@ -221,7 +220,7 @@ LteSpectrumPhy::GetTypeId (void)
                      MakeTraceSourceAccessor (&LteSpectrumPhy::m_phyTxStartTrace),
                      "ns3::PacketBurst::TracedCallback")
     .AddTraceSource ("TxEnd",
-                     "Trace fired when a previously started transmission is finished",
+                     "Trace fired when a previosuly started transmission is finished",
                      MakeTraceSourceAccessor (&LteSpectrumPhy::m_phyTxEndTrace),
                      "ns3::PacketBurst::TracedCallback")
     .AddTraceSource ("RxStart",
@@ -229,11 +228,11 @@ LteSpectrumPhy::GetTypeId (void)
                      MakeTraceSourceAccessor (&LteSpectrumPhy::m_phyRxStartTrace),
                      "ns3::PacketBurst::TracedCallback")
     .AddTraceSource ("RxEndOk",
-                     "Trace fired when a previously started RX terminates successfully",
+                     "Trace fired when a previosuly started RX terminates successfully",
                      MakeTraceSourceAccessor (&LteSpectrumPhy::m_phyRxEndOkTrace),
                      "ns3::Packet::TracedCallback")
     .AddTraceSource ("RxEndError",
-                     "Trace fired when a previously started RX terminates with an error",
+                     "Trace fired when a previosuly started RX terminates with an error",
                      MakeTraceSourceAccessor (&LteSpectrumPhy::m_phyRxEndErrorTrace),
                      "ns3::Packet::TracedCallback")
     .AddAttribute ("DataErrorModelEnabled",
@@ -446,7 +445,7 @@ bool
 LteSpectrumPhy::StartTxDataFrame (Ptr<PacketBurst> pb, std::list<Ptr<LteControlMessage> > ctrlMsgList, Time duration)
 {
   NS_LOG_FUNCTION (this << pb);
-  NS_LOG_LOGIC (this << " state: " << m_state);
+  //NS_LOG_UNCOND (this << " state: " << m_state<< pb);
   
   m_phyTxStartTrace (pb);
   
@@ -455,7 +454,7 @@ LteSpectrumPhy::StartTxDataFrame (Ptr<PacketBurst> pb, std::list<Ptr<LteControlM
     case RX_DATA:
     case RX_DL_CTRL:
     case RX_UL_SRS:
-      NS_FATAL_ERROR ("cannot TX while RX: according to FDD channel access, the physical layer for transmission cannot be used for reception");
+      NS_FATAL_ERROR ("cannot TX while RX: according to FDD channel acces, the physical layer for transmission cannot be used for reception");
       break;
 
     case TX_DATA:
@@ -467,7 +466,7 @@ LteSpectrumPhy::StartTxDataFrame (Ptr<PacketBurst> pb, std::list<Ptr<LteControlM
     case IDLE:
     {
       /*
-      m_txPsd must be set by the device, according to
+      m_txPsd must be setted by the device, according to
       (i) the available subchannel for transmission
       (ii) the power transmission
       */
@@ -512,7 +511,7 @@ LteSpectrumPhy::StartTxDlCtrlFrame (std::list<Ptr<LteControlMessage> > ctrlMsgLi
     case RX_DATA:
     case RX_DL_CTRL:
     case RX_UL_SRS:
-      NS_FATAL_ERROR ("cannot TX while RX: according to FDD channel access, the physical layer for transmission cannot be used for reception");
+      NS_FATAL_ERROR ("cannot TX while RX: according to FDD channel acces, the physical layer for transmission cannot be used for reception");
       break;
       
     case TX_DATA:
@@ -524,7 +523,7 @@ LteSpectrumPhy::StartTxDlCtrlFrame (std::list<Ptr<LteControlMessage> > ctrlMsgLi
     case IDLE:
     {
       /*
-      m_txPsd must be set by the device, according to
+      m_txPsd must be setted by the device, according to
       (i) the available subchannel for transmission
       (ii) the power transmission
       */
@@ -570,7 +569,7 @@ LteSpectrumPhy::StartTxUlSrsFrame ()
     case RX_DATA:
     case RX_DL_CTRL:
     case RX_UL_SRS:
-      NS_FATAL_ERROR ("cannot TX while RX: according to FDD channel access, the physical layer for transmission cannot be used for reception");
+      NS_FATAL_ERROR ("cannot TX while RX: according to FDD channel acces, the physical layer for transmission cannot be used for reception");
       break;
       
     case TX_DL_CTRL:
@@ -582,7 +581,7 @@ LteSpectrumPhy::StartTxUlSrsFrame ()
     case IDLE:
     {
       /*
-      m_txPsd must be set by the device, according to
+      m_txPsd must be setted by the device, according to
       (i) the available subchannel for transmission
       (ii) the power transmission
       */
@@ -621,6 +620,7 @@ LteSpectrumPhy::EndTxData ()
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC (this << " state: " << m_state);
+  //std::cout<< Simulator::Now().GetSeconds()<<" LteSpectrumPhy::EndTxData"<<std::endl;
 
   NS_ASSERT (m_state == TX_DATA);
   m_phyTxEndTrace (m_txPacketBurst);
@@ -956,7 +956,6 @@ LteSpectrumPhy::EndRxData ()
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC (this << " state: " << m_state);
-
   NS_ASSERT (m_state == RX_DATA);
 
   // this will trigger CQI calculation and Error Model evaluation
@@ -967,12 +966,13 @@ LteSpectrumPhy::EndRxData ()
   expectedTbs_t::iterator itTb = m_expectedTbs.begin ();
   
   // apply transmission mode gain
-  NS_LOG_DEBUG (this << " txMode " << (uint16_t)m_transmissionMode << " gain " << m_txModeGain.at (m_transmissionMode));
+  NS_LOG_DEBUG (this << " txMode " << (uint16_t)m_transmissionMode << " gain " << m_txModeGain.at (m_transmissionMode) << " m_expectedTbs " << (int)m_expectedTbs.size());
   NS_ASSERT (m_transmissionMode < m_txModeGain.size ());
   m_sinrPerceived *= m_txModeGain.at (m_transmissionMode);
   
   while (itTb!=m_expectedTbs.end ())
     {
+      NS_LOG_DEBUG (this << " m_dataErrorModelEnabled " << (int)m_dataErrorModelEnabled << " m_rxPacketBurstList.size () " << m_rxPacketBurstList.size ());
       if ((m_dataErrorModelEnabled)&&(m_rxPacketBurstList.size ()>0)) // avoid to check for errors when there is no actual data transmitted
         {
           // retrieve HARQ info
@@ -993,7 +993,7 @@ LteSpectrumPhy::EndRxData ()
           TbStats_t tbStats = LteMiErrorModel::GetTbDecodificationStats (m_sinrPerceived, (*itTb).second.rbBitmap, (*itTb).second.size, (*itTb).second.mcs, harqInfoList);
           (*itTb).second.mi = tbStats.mi;
           (*itTb).second.corrupt = m_random->GetValue () > tbStats.tbler ? false : true;
-          NS_LOG_DEBUG (this << "RNTI " << (*itTb).first.m_rnti << " size " << (*itTb).second.size << " mcs " << (uint32_t)(*itTb).second.mcs << " bitmap " << (*itTb).second.rbBitmap.size () << " layer " << (uint16_t)(*itTb).first.m_layer << " TBLER " << tbStats.tbler << " corrupted " << (*itTb).second.corrupt);
+          NS_LOG_DEBUG (this << " RNTI " << (*itTb).first.m_rnti << " size " << (*itTb).second.size << " mcs " << (uint32_t)(*itTb).second.mcs << " bitmap " << (*itTb).second.rbBitmap.size () << " layer " << (uint16_t)(*itTb).first.m_layer << " TBLER " << tbStats.tbler << " corrupted " << (*itTb).second.corrupt);
           // fire traces on DL/UL reception PHY stats
           PhyReceptionStatParameters params;
           params.m_timestamp = Simulator::Now ().GetMilliSeconds ();
@@ -1174,7 +1174,7 @@ LteSpectrumPhy::EndRxDlCtrl ()
   if (m_ctrlErrorModelEnabled)
     {
       double  errorRate = LteMiErrorModel::GetPcfichPdcchError (m_sinrPerceived);
-      error = m_random->GetValue () > errorRate ? false : true;
+      error = 0;//m_random->GetValue () > errorRate ? false : true;
       NS_LOG_DEBUG (this << " PCFICH-PDCCH Decodification, errorRate " << errorRate << " error " << error);
     }
 

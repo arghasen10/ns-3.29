@@ -79,17 +79,6 @@ UanNetDevice::Clear ()
 }
 
 void
-UanNetDevice::DoInitialize (void)
-{
-  m_phy->Initialize ();
-  m_mac->Initialize ();
-  m_channel->Initialize ();
-  m_trans->Initialize ();
-
-  NetDevice::DoInitialize ();
-}
-
-void
 UanNetDevice::DoDispose ()
 {
   Clear ();
@@ -271,19 +260,20 @@ UanNetDevice::GetBroadcast () const
 bool
 UanNetDevice::IsMulticast () const
 {
-  return true;
+  return false;
 }
 
 Address
 UanNetDevice::GetMulticast (Ipv4Address multicastGroup) const
 {
-  NS_UNUSED (multicastGroup);
+  NS_FATAL_ERROR ("UanNetDevice does not support multicast");
   return m_mac->GetBroadcast ();
 }
 
 Address
 UanNetDevice::GetMulticast (Ipv6Address addr) const
 {
+  NS_FATAL_ERROR ("UanNetDevice does not support multicast");
   return m_mac->GetBroadcast ();
 }
 
@@ -301,19 +291,12 @@ UanNetDevice::IsPointToPoint () const
 bool
 UanNetDevice::Send (Ptr<Packet> packet, const Address &dest, uint16_t protocolNumber)
 {
-  uint8_t tmp [6];
-  dest.CopyTo (tmp);
-  Mac8Address udest (tmp[0]);
-
-  return m_mac->Enqueue (packet, protocolNumber, udest);
+  return m_mac->Enqueue (packet, dest, protocolNumber);
 }
 
 bool
 UanNetDevice::SendFrom (Ptr<Packet> packet, const Address& source, const Address& dest, uint16_t protocolNumber)
 {
-  NS_UNUSED (source);
-  NS_UNUSED (dest);
-  NS_UNUSED (protocolNumber);
   // Not yet implemented
   NS_ASSERT_MSG (0, "Not yet implemented");
   return false;
@@ -333,7 +316,7 @@ UanNetDevice::SetNode (Ptr<Node> node)
 bool
 UanNetDevice::NeedsArp () const
 {
-  return true;
+  return false;
 }
 
 void
@@ -343,11 +326,11 @@ UanNetDevice::SetReceiveCallback (NetDevice::ReceiveCallback cb)
 }
 
 void
-UanNetDevice::ForwardUp (Ptr<Packet> pkt, uint16_t protocolNumber, const Mac8Address &src)
+UanNetDevice::ForwardUp (Ptr<Packet> pkt, const UanAddress &src)
 {
   NS_LOG_DEBUG ("Forwarding packet up to application");
   m_rxLogger (pkt, src);
-  m_forwardUp (this, pkt, protocolNumber, src);
+  m_forwardUp (this, pkt, 0, src);
 
 }
 
@@ -404,25 +387,13 @@ void
 UanNetDevice::SetAddress (Address address)
 {
   NS_ASSERT_MSG (0, "Tried to set MAC address with no MAC");
-  m_mac->SetAddress (Mac8Address::ConvertFrom (address));
+  m_mac->SetAddress (UanAddress::ConvertFrom (address));
 }
 
 void
 UanNetDevice::SetSleepMode (bool sleep)
 {
   m_phy->SetSleepMode (sleep);
-}
-
-void
-UanNetDevice::SetTxModeIndex (uint32_t txModeIndex)
-{
-  m_mac->SetTxModeIndex (txModeIndex);
-}
-
-uint32_t
-UanNetDevice::GetTxModeIndex ()
-{
-  return m_mac->GetTxModeIndex ();
 }
 
 } // namespace ns3

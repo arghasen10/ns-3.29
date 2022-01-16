@@ -288,14 +288,6 @@ AcousticModemEnergyModel::HandleEnergyRecharged (void)
   SetMicroModemState(UanPhy::IDLE);
 }
 
-void
-AcousticModemEnergyModel::HandleEnergyChanged (void)
-{
-  NS_LOG_FUNCTION (this);
-  //Not implemented
-}
-
-
 /*
  * Private functions start here.
  */

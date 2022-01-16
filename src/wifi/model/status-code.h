@@ -79,7 +79,7 @@ public:
 
 
 private:
-  uint16_t m_code; ///< status code
+  uint16_t m_code;
 };
 
 std::ostream &operator << (std::ostream &os, const StatusCode &code);

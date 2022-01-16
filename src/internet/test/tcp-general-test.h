@@ -23,7 +23,6 @@
 #include "ns3/error-model.h"
 #include "ns3/tcp-socket-base.h"
 #include "ns3/tcp-congestion-ops.h"
-#include "ns3/tcp-recovery-ops.h"
 #include "ns3/test.h"
 
 namespace ns3 {
@@ -45,8 +44,7 @@ namespace ns3 {
  *
  * \see SetRcvAckCb
  * \see SetProcessedAckCb
- * \see SetAfterRetransmitCb
- * \see SetBeforeRetransmitCb
+ * \see SetRetransmitCb
  */
 class TcpSocketMsgBase : public ns3::TcpSocketBase
 {
@@ -69,10 +67,8 @@ public:
   {
     m_rcvAckCb = other.m_rcvAckCb;
     m_processedAckCb = other.m_processedAckCb;
-    m_beforeRetrCallback = other.m_beforeRetrCallback;
-    m_afterRetrCallback = other.m_afterRetrCallback;
+    m_retrCallback = other.m_retrCallback;
     m_forkCb = other.m_forkCb;
-    m_updateRttCb = other.m_updateRttCb;
   }
 
   /// Callback for the ACK management.
@@ -106,14 +102,7 @@ public:
    *
    * \param cb callback
    */
-  void SetAfterRetransmitCb (RetrCb cb);
-
-  /**
-   * \brief Set the callback invoked before the processing of a retransmit timeout
-   *
-   * \param cb callback
-   */
-  void SetBeforeRetransmitCb (RetrCb cb);
+  void SetRetransmitCb (RetrCb cb);
 
   /**
    * \brief Set the callback invoked after the forking
@@ -130,7 +119,7 @@ public:
 
 protected:
   virtual void ReceivedAck (Ptr<Packet> packet, const TcpHeader& tcpHeader);
-  virtual void ReTxTimeout (void);
+  virtual void Retransmit (void);
   virtual Ptr<TcpSocketBase> Fork (void);
   virtual void CompleteFork (Ptr<Packet> p, const TcpHeader& tcpHeader,
                              const Address& fromAddress, const Address& toAddress);
@@ -140,8 +129,7 @@ protected:
 private:
   AckManagementCb m_rcvAckCb;       //!< Receive ACK callback.
   AckManagementCb m_processedAckCb; //!< Processed ACK callback.
-  RetrCb m_beforeRetrCallback;      //!< Before retransmission callback.
-  RetrCb m_afterRetrCallback;       //!< After retransmission callback.
+  RetrCb m_retrCallback;            //!< Retransmission callback.
   Callback<void, Ptr<TcpSocketMsgBase> > m_forkCb;  //!< Fork callback.
   UpdateRttCallback m_updateRttCb;  //!< Update RTT callback.
 };
@@ -324,18 +312,6 @@ protected:
                                               TypeId congControl);
 
   /**
-   * \brief Create a socket
-   *
-   * \param node associated node
-   * \param socketType Type of the TCP socket
-   * \param congControl congestion control
-   * \param recoveryAlgorithm recovery algorithm
-   * \return a pointer to the newer created socket
-   */
-  virtual Ptr<TcpSocketMsgBase> CreateSocket (Ptr<Node> node, TypeId socketType,
-                                              TypeId congControl, TypeId recoveryAlgorithm);
-
-  /**
    * \brief Get the pointer to a previously created sender socket
    * \return ptr to sender socket or 0
    */
@@ -372,7 +348,7 @@ protected:
   virtual void DoRun (void);
 
   /**
-   * \brief Change the configuration of the environment
+   * \brief Change the configuration of the evironment
    */
   virtual void ConfigureEnvironment (void);
 
@@ -479,7 +455,7 @@ protected:
   Time GetRto (SocketWho who);
 
   /**
-   * \brief Get the minimum RTO attribute
+   * \brief Get the minimun RTO attribute
    *
    * \param who node to get the parameter from
    * \return minimum RTO time
@@ -583,14 +559,6 @@ protected:
   void SetInitialCwnd (SocketWho who, uint32_t initialCwnd);
 
   /**
-   * \brief Forcefully set the ecn mode on
-   *
-   * \param who socket to force
-   * \param ecnMode Mode of ECN. Currently NoEcn and ClassicEcn is supported.
-   */
-  void SetEcn (SocketWho who, TcpSocketBase::EcnMode_t ecnMode);
-
-  /**
    * \brief Forcefully set the initial ssth
    *
    * \param who socket to force
@@ -645,13 +613,6 @@ protected:
   void SetCongestionControl (TypeId congControl) { m_congControlTypeId = congControl; }
 
   /**
-   * \brief recovery algorithm of the sender socket
-   *
-   * \param recovery typeid of the recovery algorithm
-   */
-  void SetRecoveryAlgorithm (TypeId reccovery) { m_recoveryTypeId = reccovery; }
-
-  /**
    * \brief MTU of the bottleneck link
    *
    * \param mtu MTU
@@ -666,8 +627,6 @@ protected:
   virtual void CongStateTrace (const TcpSocketState::TcpCongState_t oldValue,
                                const TcpSocketState::TcpCongState_t newValue)
   {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
   }
 
   /**
@@ -678,20 +637,6 @@ protected:
    */
   virtual void CWndTrace (uint32_t oldValue, uint32_t newValue)
   {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
-  }
-
-  /**
-   * \brief Tracks the inflated congestion window changes
-   *
-   * \param oldValue old value
-   * \param newValue new value
-   */
-  virtual void CWndInflTrace (uint32_t oldValue, uint32_t newValue)
-  {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
   }
 
   /**
@@ -704,8 +649,6 @@ protected:
    */
   virtual void RttTrace (Time oldTime, Time newTime)
   {
-    NS_UNUSED (oldTime);
-    NS_UNUSED (newTime);
   }
 
   /**
@@ -718,8 +661,6 @@ protected:
    */
   virtual void SsThreshTrace (uint32_t oldValue, uint32_t newValue)
   {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
   }
 
   /**
@@ -732,50 +673,6 @@ protected:
    */
   virtual void BytesInFlightTrace (uint32_t oldValue, uint32_t newValue)
   {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
-  }
-
-  /**
-   * \brief RTO changes
-   *
-   * This applies only for sender socket.
-   *
-   * \param oldValue old value
-   * \param newValue new value
-   */
-  virtual void RtoTrace (Time oldValue, Time newValue)
-  {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
-  }
-
-  /**
-   * \brief Next tx seq changes
-   *
-   * This applies only for sender socket.
-   *
-   * \param oldValue old value
-   * \param newValue new value
-   */
-  virtual void NextTxSeqTrace (SequenceNumber32 oldValue, SequenceNumber32 newValue)
-  {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
-  }
-
-  /**
-   * \brief Highest tx seq changes
-   *
-   * This applies only for sender socket.
-   *
-   * \param oldValue old value
-   * \param newValue new value
-   */
-  virtual void HighestTxSeqTrace (SequenceNumber32 oldValue, SequenceNumber32 newValue)
-  {
-    NS_UNUSED (oldValue);
-    NS_UNUSED (newValue);
   }
 
   /**
@@ -784,7 +681,6 @@ protected:
    */
   virtual void NormalClose (SocketWho who)
   {
-    NS_UNUSED (who);
   }
 
   /**
@@ -795,7 +691,6 @@ protected:
   virtual void ErrorClose  (SocketWho who)
   {
     /** \todo indicate the error */
-    NS_UNUSED (who);
   }
 
   /**
@@ -804,7 +699,6 @@ protected:
    */
   virtual void QueueDrop   (SocketWho who)
   {
-    NS_UNUSED (who);
   }
 
   /**
@@ -813,7 +707,6 @@ protected:
    */
   virtual void PhyDrop     (SocketWho who)
   {
-    NS_UNUSED (who);
   }
 
   /**
@@ -828,9 +721,6 @@ protected:
   virtual void RcvAck      (const Ptr<const TcpSocketState> tcb,
                             const TcpHeader& h, SocketWho who)
   {
-    NS_UNUSED (tcb);
-    NS_UNUSED (h);
-    NS_UNUSED (who);
   }
 
   /**
@@ -845,9 +735,6 @@ protected:
   virtual void ProcessedAck (const Ptr<const TcpSocketState> tcb,
                              const TcpHeader& h, SocketWho who)
   {
-    NS_UNUSED (tcb);
-    NS_UNUSED (h);
-    NS_UNUSED (who);
   }
 
   /**
@@ -874,22 +761,8 @@ protected:
    * \param tcb Transmission control block
    * \param who where the RTO has expired (SENDER or RECEIVER)
    */
-  virtual void AfterRTOExpired (const Ptr<const TcpSocketState> tcb, SocketWho who)
+  virtual void RTOExpired (const Ptr<const TcpSocketState> tcb, SocketWho who)
   {
-    NS_UNUSED (tcb);
-    NS_UNUSED (who);
-  }
-
-  /**
-   * \brief Rto has expired
-   *
-   * \param tcb Transmission control block
-   * \param who where the RTO has expired (SENDER or RECEIVER)
-   */
-  virtual void BeforeRTOExpired (const Ptr<const TcpSocketState> tcb, SocketWho who)
-  {
-    NS_UNUSED (tcb);
-    NS_UNUSED (who);
   }
 
   /**
@@ -902,10 +775,6 @@ protected:
   virtual void UpdatedRttHistory (const SequenceNumber32 & seq, uint32_t sz,
                                   bool isRetransmission, SocketWho who)
   {
-    NS_UNUSED (seq);
-    NS_UNUSED (sz);
-    NS_UNUSED (isRetransmission);
-    NS_UNUSED (who);
   }
 
   /**
@@ -916,8 +785,6 @@ protected:
    */
   virtual void DataSent (uint32_t size, SocketWho who)
   {
-    NS_UNUSED (size);
-    NS_UNUSED (who);
   }
 
   /**
@@ -983,7 +850,6 @@ protected:
   }
 
   TypeId   m_congControlTypeId;      //!< Congestion control
-  TypeId   m_recoveryTypeId;         //!< Recovery
 
 private:
   // Member variables, accessible through getters
@@ -1073,23 +939,6 @@ private:
    */
   void UpdateRttHistoryCb (Ptr<const TcpSocketBase> tcp, const SequenceNumber32&seq,
                            uint32_t sz, bool isRetransmission);
-
-  /**
-   * \brief Invoked after a retransmit event.
-   * \param tcb Transmission control block.
-   * \param tcp The TCP socket.
-   */
-  void AfterRetransmitCb   (const Ptr<const TcpSocketState> tcb,
-                            const Ptr<const TcpSocketBase> tcp);
-
-  /**
-   * \brief Invoked before a retransmit event.
-   * \param tcb Transmission control block.
-   * \param tcp The TCP socket.
-   */
-  void BeforeRetransmitCb   (const Ptr<const TcpSocketState> tcb,
-                             const Ptr<const TcpSocketBase> tcp);
-
   /**
    * \brief Data sent Callback.
    * \param socket The socket.

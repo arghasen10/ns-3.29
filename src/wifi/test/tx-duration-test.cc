@@ -19,23 +19,17 @@
  *          Sébastien Deronne <sebastien.deronne@gmail.com>
  */
 
-#include "ns3/log.h"
-#include "ns3/test.h"
+#include <ns3/log.h>
+#include <ns3/test.h>
 #include "ns3/yans-wifi-phy.h"
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("InterferenceHelperTxDurationTest");
 
-static const uint16_t CHANNEL_1_MHZ  = 2412; // a 2.4 GHz center frequency (MHz)
-static const uint16_t CHANNEL_36_MHZ = 5180; // a 5 GHz center frequency (MHz)
+static const double CHANNEL_1_MHZ  = 2412.0; // a 2.4 GHz center frequency (MHz)
+static const double CHANNEL_36_MHZ = 5180.0; // a 5 GHz center frequency (MHz)
 
-/**
- * \ingroup wifi-test
- * \ingroup tests
- *
- * \brief Tx Duration Test
- */
 class TxDurationTest : public TestCase
 {
 public:
@@ -53,12 +47,11 @@ private:
    * @param payloadMode the WifiMode used for the transmission
    * @param channelWidth the channel width used for the transmission (in MHz)
    * @param guardInterval the guard interval duration used for the transmission (in nanoseconds)
-   * @param preamble the WifiPreamble used for the transmission
    * @param knownDuration the known duration value of the transmission
    *
    * @return true if values correspond, false otherwise
    */
-  bool CheckPayloadDuration (uint32_t size, WifiMode payloadMode, uint16_t channelWidth, uint16_t guardInterval, WifiPreamble preamble, Time knownDuration);
+  bool CheckPayloadDuration (uint32_t size, WifiMode payloadMode, uint32_t channelWidth, uint16_t guardInterval, Time knownDuration);
 
   /**
    * Check if the overall tx duration returned by InterferenceHelper
@@ -73,7 +66,7 @@ private:
    *
    * @return true if values correspond, false otherwise
    */
-  bool CheckTxDuration (uint32_t size, WifiMode payloadMode, uint16_t channelWidth, uint16_t guardInterval, WifiPreamble preamble, Time knownDuration);
+  bool CheckTxDuration (uint32_t size, WifiMode payloadMode, uint32_t channelWidth, uint16_t guardInterval, WifiPreamble preamble, Time knownDuration);
 
 };
 
@@ -87,17 +80,16 @@ TxDurationTest::~TxDurationTest ()
 }
 
 bool
-TxDurationTest::CheckPayloadDuration (uint32_t size, WifiMode payloadMode, uint16_t channelWidth, uint16_t guardInterval, WifiPreamble preamble, Time knownDuration)
+TxDurationTest::CheckPayloadDuration (uint32_t size, WifiMode payloadMode, uint32_t channelWidth, uint16_t guardInterval, Time knownDuration)
 {
   WifiTxVector txVector;
   txVector.SetMode (payloadMode);
-  txVector.SetPreambleType (preamble);
   txVector.SetChannelWidth (channelWidth);
   txVector.SetGuardInterval (guardInterval);
   txVector.SetNss (1);
   txVector.SetStbc (0);
   txVector.SetNess (0);
-  uint16_t testedFrequency = CHANNEL_1_MHZ;
+  double testedFrequency = CHANNEL_1_MHZ;
   Ptr<YansWifiPhy> phy = CreateObject<YansWifiPhy> ();
   if (payloadMode.GetModulationClass () == WIFI_MOD_CLASS_OFDM
       || payloadMode.GetModulationClass () == WIFI_MOD_CLASS_HT
@@ -142,7 +134,7 @@ TxDurationTest::CheckPayloadDuration (uint32_t size, WifiMode payloadMode, uint1
 }
 
 bool
-TxDurationTest::CheckTxDuration (uint32_t size, WifiMode payloadMode, uint16_t channelWidth, uint16_t guardInterval, WifiPreamble preamble, Time knownDuration)
+TxDurationTest::CheckTxDuration (uint32_t size, WifiMode payloadMode, uint32_t channelWidth, uint16_t guardInterval, WifiPreamble preamble, Time knownDuration)
 {
   WifiTxVector txVector;
   txVector.SetMode (payloadMode);
@@ -152,7 +144,7 @@ TxDurationTest::CheckTxDuration (uint32_t size, WifiMode payloadMode, uint16_t c
   txVector.SetNss (1);
   txVector.SetStbc (0);
   txVector.SetNess (0);
-  uint16_t testedFrequency = CHANNEL_1_MHZ;
+  double testedFrequency = CHANNEL_1_MHZ;
   Ptr<YansWifiPhy> phy = CreateObject<YansWifiPhy> ();
   if (payloadMode.GetModulationClass () == WIFI_MOD_CLASS_OFDM
       || payloadMode.GetModulationClass () == WIFI_MOD_CLASS_HT
@@ -166,7 +158,7 @@ TxDurationTest::CheckTxDuration (uint32_t size, WifiMode payloadMode, uint16_t c
     {
       std::cerr << "size=" << size
                 << " mode=" << payloadMode
-                << " channelWidth=" << +channelWidth
+                << " channelWidth=" << channelWidth
                 << " guardInterval=" << guardInterval
                 << " datarate=" << payloadMode.GetDataRate (channelWidth, guardInterval, 1)
                 << " preamble=" << preamble
@@ -205,10 +197,10 @@ TxDurationTest::DoRun (void)
 
   //IEEE Std 802.11-2007 Table 18-2 "Example of LENGTH calculations for CCK"
   retval = retval
-    && CheckPayloadDuration (1023, WifiPhy::GetDsssRate11Mbps (), 22, 800, WIFI_PREAMBLE_LONG, MicroSeconds (744))
-    && CheckPayloadDuration (1024, WifiPhy::GetDsssRate11Mbps (), 22, 800, WIFI_PREAMBLE_LONG, MicroSeconds (745))
-    && CheckPayloadDuration (1025, WifiPhy::GetDsssRate11Mbps (), 22, 800, WIFI_PREAMBLE_LONG, MicroSeconds (746))
-    && CheckPayloadDuration (1026, WifiPhy::GetDsssRate11Mbps (), 22, 800, WIFI_PREAMBLE_LONG, MicroSeconds (747));
+    && CheckPayloadDuration (1023, WifiPhy::GetDsssRate11Mbps (), 22, 800, MicroSeconds (744))
+    && CheckPayloadDuration (1024, WifiPhy::GetDsssRate11Mbps (), 22, 800, MicroSeconds (745))
+    && CheckPayloadDuration (1025, WifiPhy::GetDsssRate11Mbps (), 22, 800, MicroSeconds (746))
+    && CheckPayloadDuration (1026, WifiPhy::GetDsssRate11Mbps (), 22, 800, MicroSeconds (747));
 
   NS_TEST_EXPECT_MSG_EQ (retval, true, "an 802.11b CCK duration failed");
 
@@ -426,12 +418,7 @@ TxDurationTest::DoRun (void)
   NS_TEST_EXPECT_MSG_EQ (retval, true, "an 802.11ax duration failed");
 }
 
-/**
- * \ingroup wifi-test
- * \ingroup tests
- *
- * \brief Tx Duration Test Suite
- */
+
 class TxDurationTestSuite : public TestSuite
 {
 public:
@@ -444,4 +431,4 @@ TxDurationTestSuite::TxDurationTestSuite ()
   AddTestCase (new TxDurationTest, TestCase::QUICK);
 }
 
-static TxDurationTestSuite g_txDurationTestSuite; ///< the test suite
+static TxDurationTestSuite g_txDurationTestSuite;

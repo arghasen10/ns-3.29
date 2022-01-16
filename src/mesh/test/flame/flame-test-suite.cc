@@ -27,12 +27,7 @@
 using namespace ns3;
 using namespace flame;
 
-/**
- * \ingroup flame-test
- * \ingroup tests
- *
- * \brief Built-in self test for FlameHeader
- */
+/// Built-in self test for FlameHeader
 struct FlameHeaderTest : public TestCase
 {
   FlameHeaderTest () :
@@ -60,12 +55,7 @@ FlameHeaderTest::DoRun ()
 
 //-----------------------------------------------------------------------------
 
-/**
- * \ingroup flame-test
- * \ingroup tests
- *
- * \brief Unit test for FlameRtable
- */
+/// Unit test for FlameRtable
 class FlameRtableTest : public TestCase
 {
 public:
@@ -76,18 +66,17 @@ private:
   /// Test Add apth and lookup path;
   void TestLookup ();
   
-  /// Test add path and try to lookup after entry has expired
+  // Test add path and try to lookup after entry has expired
   void TestAddPath ();
-  /// Test add path and try to lookup after entry has expired
   void TestExpire ();
 
 private:
-  Mac48Address dst; ///< destination address
-  Mac48Address hop; ///< hop address
-  uint32_t iface; ///< interface
-  uint8_t cost; ///< cost
-  uint16_t seqnum; ///< sequence number
-  Ptr<FlameRtable> table; ///< table
+  Mac48Address dst;
+  Mac48Address hop;
+  uint32_t iface;
+  uint8_t cost;
+  uint16_t seqnum;
+  Ptr<FlameRtable> table;
 };
 
 /// Test instance
@@ -140,12 +129,8 @@ FlameRtableTest::DoRun ()
 }
 
 
-/**
- * \ingroup flame-test
- * \ingroup tests
- *
- * \brief Flame Test Suite
- */
+//-----------------------------------------------------------------------------
+
 class FlameTestSuite : public TestSuite
 {
 public:
@@ -159,4 +144,4 @@ FlameTestSuite::FlameTestSuite ()
   AddTestCase (new FlameRtableTest, TestCase::QUICK);
 }
 
-static FlameTestSuite g_flameTestSuite; ///< the test suite
+static FlameTestSuite g_flameTestSuite;

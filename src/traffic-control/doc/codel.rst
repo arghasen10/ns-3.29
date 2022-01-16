@@ -48,9 +48,11 @@ There are 2 branches to ``CoDelQueueDisc::DoDequeue ()``:
 The CoDel queue disc does not require packet filters, does not admit
 child queue discs and uses a single internal queue. If not provided by
 the user, a DropTail queue operating in the same mode (packet or byte)
-as the queue disc and having a size equal to the CoDel MaxSize attribute
-is created. Otherwise, the capacity of the queue disc is determined by
-the capacity of the internal queue provided by the user.
+as the queue disc and having a size equal to the CoDel MaxPackets or
+MaxBytes attribute (depending on the mode) is created. If the user
+provides an internal queue, such a queue must operate in the same mode
+as the queue disc and have a size not less than the CoDel MaxPackets or
+MaxBytes attribute (depending on the mode).
 
 
 References
@@ -67,7 +69,9 @@ Attributes
 
 The key attributes that the CoDelQueue class holds include the following: 
 
-* ``MaxSize:`` The maximum number of packets/bytes the queue can hold. The default value is 1500 * DEFAULT_CODEL_LIMIT, which is 1500 * 1000 bytes.
+* ``Mode:`` CoDel operating mode (BYTES, PACKETS, or ILLEGAL). The default mode is BYTES. 
+* ``MaxPackets:`` The maximum number of packets the queue can hold. The default value is DEFAULT_CODEL_LIMIT, which is 1000 packets.
+* ``MaxBytes:`` The maximum number of bytes the queue can hold. The default value is 1500 * DEFAULT_CODEL_LIMIT, which is 1500 * 1000 bytes. 
 * ``MinBytes:`` The CoDel algorithm minbytes parameter. The default value is 1500 bytes. 
 * ``Interval:`` The sliding-minimum window. The default value is 100 ms. 
 * ``Target:`` The CoDel algorithm target queue delay. The default value is 5 ms. 
@@ -78,7 +82,7 @@ Examples
 The first example is `codel-vs-pfifo-basic-test.cc` located in ``src/traffic-control/examples``.  To run the file (the first invocation below shows the available
 command-line options):
 
-.. sourcecode:: bash
+:: 
 
    $ ./waf --run "codel-vs-pfifo-basic-test --PrintHelp"
    $ ./waf --run "codel-vs-pfifo-basic-test --queueType=CoDel --pcapFileName=codel.pcap --cwndTrFileName=cwndCodel.tr" 
@@ -86,14 +90,14 @@ command-line options):
 The expected output from the previous commands are two files: `codel.pcap` file and `cwndCoDel.tr` (ASCII trace) file The .pcap file can be analyzed using 
 wireshark or tcptrace:
 
-.. sourcecode:: bash
+:: 
 
    $ tcptrace -l -r -n -W codel.pcap
 
 The second example is `codel-vs-pfifo-asymmetric.cc` located in ``src/traffic-control/examples``.  This example is intended to model a typical cable modem
 deployment scenario.  To run the file:
 
-.. sourcecode:: bash
+::
 
    $ ./waf --run "codel-vs-pfifo-asymmetric --PrintHelp"
    $ ./waf --run codel-vs-pfifo-asymmetric
@@ -132,7 +136,7 @@ The CoDel model is tested using :cpp:class:`CoDelQueueDiscTestSuite` class defin
 
 The test suite can be run using the following commands: 
 
-.. sourcecode:: bash
+::
 
   $ ./waf configure --enable-examples --enable-tests
   $ ./waf build
@@ -140,7 +144,7 @@ The test suite can be run using the following commands:
 
 or  
 
-.. sourcecode:: bash
+::
 
   $ NS_LOG="CoDelQueueDisc" ./waf --run "test-runner --suite=codel-queue-disc"
 

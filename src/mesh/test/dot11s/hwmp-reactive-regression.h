@@ -26,9 +26,7 @@
 using namespace ns3;
 
 /**
- * \ingroup dot11s-test
- * \ingroup tests
- *
+ * \ingroup dot11s
  * \brief test for multihop path establishing and path error
  * procedures
  * Initiate scenario with 6 stations. Procedure of opening peer link
@@ -77,22 +75,17 @@ public:
   virtual ~HwmpReactiveRegressionTest();
 
   virtual void DoRun ();
-  /// Check results function
   void CheckResults ();
 private:
   /// \internal It is important to have pointers here
   NodeContainer * m_nodes;
   /// Simulation time
   Time m_time;
-  Ipv4InterfaceContainer m_interfaces; ///< interfaces
+  Ipv4InterfaceContainer m_interfaces;
 
-  /// Create nodes function
   void CreateNodes ();
-  /// Create devices function
   void CreateDevices ();
-  /// Install application function
   void InstallApplications ();
-  /// Reset position function
   void ResetPosition ();
 
   /// Server-side socket
@@ -100,7 +93,7 @@ private:
   /// Client-side socket
   Ptr<Socket> m_clientSocket;
 
-  /// sent packets counter
+  // sent packets counter
   uint32_t m_sentPktsCounter;
 
   /**

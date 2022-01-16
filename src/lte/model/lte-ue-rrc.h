@@ -36,9 +36,14 @@
 #include "ns3/component-carrier-ue.h"
 #include <ns3/lte-ue-ccm-rrc-sap.h>
 #include <vector>
+#include <float.h>
 
 #include <map>
 #include <set>
+
+#include "ns3/simple-device-energy-model.h"
+#include "ns3/energy-source-container.h"
+#include "ns3/energy-module-nbiot.h"
 
 #define MIN_NO_CC 1
 #define MAX_NO_CC 5 // this is the maximum number of carrier components allowed by 3GPP up to R13
@@ -79,19 +84,12 @@ class LteSignalingRadioBearerInfo;
 class LteUeRrc : public Object
 {
 
-  /// allow UeMemberLteUeCmacSapUser class friend access
   friend class UeMemberLteUeCmacSapUser;
-  /// allow UeRrcMemberLteEnbCmacSapUser class friend access
   friend class UeRrcMemberLteEnbCmacSapUser;
-  /// allow LtePdcpSpecificLtePdcpSapUser<LteUeRrc> class friend access
   friend class LtePdcpSpecificLtePdcpSapUser<LteUeRrc>;
-  /// allow MemberLteAsSapProvider<LteUeRrc> class friend access
   friend class MemberLteAsSapProvider<LteUeRrc>;
-  /// allow MemberLteUeCphySapUser<LteUeRrc> class friend access
   friend class MemberLteUeCphySapUser<LteUeRrc>;
-  /// allow MemberLteUeRrcSapProvider<LteUeRrc> class friend access
   friend class MemberLteUeRrcSapProvider<LteUeRrc>;
-  /// allow MemberLteUeCcmRrcSapUser<LteUeRrc> class friend access
   friend class MemberLteUeCcmRrcSapUser<LteUeRrc>;
 
 public:
@@ -109,12 +107,16 @@ public:
     IDLE_WAIT_SIB1,
     IDLE_CAMPED_NORMALLY,
     IDLE_WAIT_SIB2,
+    IDLE_PAGING,
     IDLE_RANDOM_ACCESS,
     IDLE_CONNECTING,
     CONNECTED_NORMALLY,
     CONNECTED_HANDOVER,
     CONNECTED_PHY_PROBLEM,
     CONNECTED_REESTABLISHING,
+    IDLE_SUSPEND,
+    SUSPEND_PAGING,
+    IDLE_PSM,
     NUM_STATES
   };
 
@@ -137,13 +139,8 @@ private:
   virtual void DoInitialize (void);
   virtual void DoDispose (void);
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
 
-  /// Initiaize SAP
   void InitializeSap (void);
 
   /**
@@ -152,12 +149,6 @@ public:
    * \param s the CPHY SAP Provider
    */
   void SetLteUeCphySapProvider (LteUeCphySapProvider * s);
-  /**
-   * set the CPHY SAP this RRC should use to interact with the PHY
-   *
-   * \param s the CPHY SAP Provider
-   * \param index the index
-   */
   void SetLteUeCphySapProvider (LteUeCphySapProvider * s, uint8_t index);
 
   /**
@@ -166,11 +157,6 @@ public:
    * \return s the CPHY SAP User interface offered to the PHY by this RRC
    */
   LteUeCphySapUser* GetLteUeCphySapUser ();
-  /**
-   *
-   * \param index the index
-   * \return s the CPHY SAP User interface offered to the PHY by this RRC
-   */
   LteUeCphySapUser* GetLteUeCphySapUser (uint8_t index);
 
   /**
@@ -179,12 +165,6 @@ public:
    * \param s the CMAC SAP Provider to be used by this RRC
    */
   void SetLteUeCmacSapProvider (LteUeCmacSapProvider * s);
-  /**
-   * set the CMAC SAP this RRC should interact with
-   * \brief This function is overloaded to maintain backward compatibility 
-   * \param s the CMAC SAP Provider to be used by this RRC
-   * \param index the index
-   */
   void SetLteUeCmacSapProvider (LteUeCmacSapProvider * s, uint8_t index);
 
   /**
@@ -192,11 +172,6 @@ public:
    * \return s the CMAC SAP User interface offered to the MAC by this RRC
    */
   LteUeCmacSapUser* GetLteUeCmacSapUser ();
-  /**
-   * \brief This function is overloaded to maintain backward compatibility
-   * \param index the index  
-   * \return s the CMAC SAP User interface offered to the MAC by this RRC
-   */
   LteUeCmacSapUser* GetLteUeCmacSapUser (uint8_t index);
 
 
@@ -308,6 +283,18 @@ public:
    */
   void SetUseRlcSm (bool val);
 
+    /** 
+   * 
+   * \param support CA
+   */
+  void SetCaSupport (bool supportCa);
+
+  /**
+   *
+   * \return support CA
+   */
+  bool GetCaSupport (void) const;
+
   /**
    * TracedCallback signature for imsi, cellId and rnti events.
    *
@@ -352,142 +339,73 @@ public:
     (uint64_t imsi, uint16_t cellId, uint16_t rnti,
      State oldState, State newState);
 
-  /**
-    * TracedCallback signature for secondary carrier configuration events.
-    *
-    * \param [in] Pointer to UE RRC
-    * \param [in] List of LteRrcSap::SCellToAddMod
-    */
-  typedef void (* SCarrierConfiguredTracedCallback)
-    (Ptr<LteUeRrc>, std::list<LteRrcSap::SCellToAddMod>);
-
 
 private:
 
 
   // PDCP SAP methods
-  /**
-   * Receive PDCP SDU function
-   *
-   * \param params LtePdcpSapUser::ReceivePdcpSduParameters
-   */
   void DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters params);
 
   // CMAC SAP methods
-  /**
-   * Set temporary cell rnti function
-   *
-   * \param rnti RNTI
-   */
   void DoSetTemporaryCellRnti (uint16_t rnti);
+  void DoNotifyEnergyChange();
+  void DoSetFrameSubframe(uint32_t frame, uint32_t sfn);
   /// Notify random access successful function
   void DoNotifyRandomAccessSuccessful ();
-  /// Notify random access failed function
   void DoNotifyRandomAccessFailed ();
  
   // LTE AS SAP methods
-  /**
-   * Set CSG white list function
-   *
-   * \param csgId CSG ID
-   */
   void DoSetCsgWhiteList (uint32_t csgId);
-  /**
-   * Force camped on ENB function
-   *
-   * \param cellId the cell ID
-   * \param dlEarfcn the DL EARFCN
-   */
   void DoForceCampedOnEnb (uint16_t cellId, uint32_t dlEarfcn);
-  /**
-   * Start cell selection function
-   *
-   * \param dlEarfcn the DL EARFCN
-   */
   void DoStartCellSelection (uint32_t dlEarfcn);
-  /// Connect function
   void DoConnect ();
-  /**
-   * Send data function
-   *
-   * \param packet the packet
-   * \param bid the BID
-   */
   void DoSendData (Ptr<Packet> packet, uint8_t bid);
-  /// Disconnect function
   void DoDisconnect ();
 
   // CPHY SAP methods
-  /**
-   * Receive master information block function
-   *
-   * \param cellId the cell ID
-   * \param msg LteRrcSap::MasterInformationBlock
-   */
   void DoRecvMasterInformationBlock (uint16_t cellId,
                                      LteRrcSap::MasterInformationBlock msg);
-  /**
-   * Receive system information block type 1 function
-   *
-   * \param cellId the cell ID
-   * \param msg LteRrcSap::SystemInformationBlockType1
-   */
   void DoRecvSystemInformationBlockType1 (uint16_t cellId,
                                           LteRrcSap::SystemInformationBlockType1 msg);
-  /**
-   * Report UE measurements function
-   *
-   * \param params LteUeCphySapUser::UeMeasurementsParameters
-   */
   void DoReportUeMeasurements (LteUeCphySapUser::UeMeasurementsParameters params);
+
+  // NB-IoT methods
+  void DoRecvMasterInformationBlockNb (uint16_t cellId,
+                                     NbLteRrcSap::MasterInformationBlockNb msg); // Used by NB-IoT. 3GPP Release 13.
+  void DoRecvSystemInformationBlockType1Nb (uint16_t cellId,
+                                           NbLteRrcSap::SystemInformationBlockType1Nb msg); // Used by NB-IoT. 3GPP Release 13.
+  void EnableNbIotUeManager(); // Used to set true the m_nbIotActiveMode parameter
 
   // RRC SAP methods
 
-  /**
-   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::CompleteSetup interface.
-   * \param params the LteUeRrcSapProvider::CompleteSetupParameters
-   */
+  /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::CompleteSetup interface.
   void DoCompleteSetup (LteUeRrcSapProvider::CompleteSetupParameters params);
-  /**
-   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvSystemInformation interface.
-   * \param msg the LteRrcSap::SystemInformation
-   */
+  /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvSystemInformation interface.
   void DoRecvSystemInformation (LteRrcSap::SystemInformation msg);
+
+  void DoPaging();
+
+  void DoRecvPagingInformation (uint16_t cellId,
+                                          LteRrcSap::PagingInformation msg);
   /**
    * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionSetup interface.
    * \param msg the LteRrcSap::RrcConnectionSetup
    */
   void DoRecvRrcConnectionSetup (LteRrcSap::RrcConnectionSetup msg);
-  /**
-   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReconfiguration interface.
-   * \param msg the LteRrcSap::RrcConnectionReconfiguration
-   */
+  /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReconfiguration interface.
   void DoRecvRrcConnectionReconfiguration (LteRrcSap::RrcConnectionReconfiguration msg);
-  /**
-   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReestablishment interface.
-   * \param msg LteRrcSap::RrcConnectionReestablishment
-   */
+  /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReestablishment interface.
   void DoRecvRrcConnectionReestablishment (LteRrcSap::RrcConnectionReestablishment msg);
-  /**
-   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReestablishmentReject interface.
-   * \param msg LteRrcSap::RrcConnectionReestablishmentReject
-   */
+  /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReestablishmentReject interface.
   void DoRecvRrcConnectionReestablishmentReject (LteRrcSap::RrcConnectionReestablishmentReject msg);
-  /**
-   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionRelease interface.
-   * \param msg LteRrcSap::RrcConnectionRelease
-   */
+  /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionRelease interface.
   void DoRecvRrcConnectionRelease (LteRrcSap::RrcConnectionRelease msg);
-  /**
-   * Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReject interface.
-   * \param msg the LteRrcSap::RrcConnectionReject
-   */
+
+  void DoRecvRrcPagingDirect();
+  /// Part of the RRC protocol. Implement the LteUeRrcSapProvider::RecvRrcConnectionReject interface.
   void DoRecvRrcConnectionReject (LteRrcSap::RrcConnectionReject msg);
 
-  /**
-   * RRC CCM SAP USER Method
-   * \param res
-   */
+  // RRC CCM SAP USER Method
   void DoComponentCarrierEnabling (std::vector<uint8_t> res);
 
  
@@ -678,27 +596,11 @@ private:
    */
   void SendMeasurementReport (uint8_t measId);
 
-  /**
-   * Apply radio resource config dedicated.
-   * \param rrcd LteRrcSap::RadioResourceConfigDedicated
-   */
   void ApplyRadioResourceConfigDedicated (LteRrcSap::RadioResourceConfigDedicated rrcd);
-  /**
-   * Apply radio resource config dedicated secondary carrier.
-   * \param nonCec LteRrcSap::NonCriticalExtensionConfiguration
-   */
   void ApplyRadioResourceConfigDedicatedSecondaryCarrier (LteRrcSap::NonCriticalExtensionConfiguration nonCec);
-  /// Start connetion function
   void StartConnection ();
-  /// Leave connected mode
   void LeaveConnectedMode ();
-  /// Dispose old SRB1
   void DisposeOldSrb1 ();
-  /**
-   * Bid 2 DR bid.
-   * \param bid the BID
-   * \returns the DR bid
-   */
   uint8_t Bid2Drbid (uint8_t bid);
   /**
    * Switch the UE RRC to the given state.
@@ -706,28 +608,29 @@ private:
    */
   void SwitchToState (State s);
 
-  std::map<uint8_t, uint8_t> m_bid2DrbidMap; ///< bid to DR bid map
+  std::map<uint8_t, uint8_t> m_bid2DrbidMap;
 
-  std::vector<LteUeCphySapUser*> m_cphySapUser; ///< UE CPhy SAP user
-  std::vector<LteUeCphySapProvider*> m_cphySapProvider; ///< UE CPhy SAP provider
+  std::vector<LteUeCphySapUser*> m_cphySapUser;
+  std::vector<LteUeCphySapProvider*> m_cphySapProvider;
 
-  std::vector<LteUeCmacSapUser*> m_cmacSapUser; ///< UE CMac SAP user
-  std::vector<LteUeCmacSapProvider*> m_cmacSapProvider; ///< UE CMac SAP provider
+  std::vector<LteUeCmacSapUser*> m_cmacSapUser;
+  std::vector<LteUeCmacSapProvider*> m_cmacSapProvider;
 
-  LteUeRrcSapUser* m_rrcSapUser; ///< RRC SAP user
-  LteUeRrcSapProvider* m_rrcSapProvider; ///< RRC SAP provider
+  LteUeRrcSapUser* m_rrcSapUser;
+  LteUeRrcSapProvider* m_rrcSapProvider;
 
-  LteMacSapProvider* m_macSapProvider; ///< MAC SAP provider
-  LtePdcpSapUser* m_drbPdcpSapUser; ///< DRB PDCP SAP user
+  LteMacSapProvider* m_macSapProvider;
+  LtePdcpSapUser* m_drbPdcpSapUser;
 
-  LteAsSapProvider* m_asSapProvider; ///< AS SAP provider
-  LteAsSapUser* m_asSapUser; ///< AS SAP user
+  LteAsSapProvider* m_asSapProvider;
+  LteAsSapUser* m_asSapUser;
 
-  // Receive API calls from the LteUeComponentCarrierManager  instance.
+  // Receive API calls from the LteUeComponetCarrierManager  instance.
   // LteCcmRrcSapUser* m_ccmRrcSapUser;
-  /// Interface to the LteUeComponentCarrierManage instance.
-  LteUeCcmRrcSapProvider* m_ccmRrcSapProvider; ///< CCM RRC SAP provider
-  LteUeCcmRrcSapUser* m_ccmRrcSapUser; ///< CCM RRC SAP user
+  /// Interface to the LteUeComponetCarrierManage instance.
+  LteUeCcmRrcSapProvider* m_ccmRrcSapProvider;
+  LteUeCcmRrcSapUser* m_ccmRrcSapUser;
+
 
   /// The current UE RRC state.
   State m_state;
@@ -768,16 +671,34 @@ private:
    */
   bool m_useRlcSm;
 
-  uint8_t m_lastRrcTransactionIdentifier; ///< last RRC transaction identifier
+  uint8_t m_lastRrcTransactionIdentifier;
 
-  LteRrcSap::PdschConfigDedicated m_pdschConfigDedicated; ///< the PDSCH condig dedicated
+  LteRrcSap::PdschConfigDedicated m_pdschConfigDedicated;
 
   uint8_t m_dlBandwidth; /**< Downlink bandwidth in RBs. */
   uint8_t m_ulBandwidth; /**< Uplink bandwidth in RBs. */
 
+  uint32_t m_frameNo;
+  uint32_t m_subframeNo;
+
+  /* Parameters for Paging */
+  uint16_t  m_T;
+  uint16_t  m_nb;
+  uint64_t  m_pf;
+  uint16_t  m_po;
+  int32_t  m_t3324;
+  int64_t  m_t3412;
+  int32_t  m_edrx_cycle;
+  bool m_gotpaging;
+
+  bool m_requirepagingflag;
+
+
   uint32_t m_dlEarfcn;  /**< Downlink carrier frequency. */
   uint32_t m_ulEarfcn;  /**< Uplink carrier frequency. */
-  std::list<LteRrcSap::SCellToAddMod> m_sCellToAddModList; /**< Secondary carriers. */
+
+  Time m_lastUpdateTime;
+  EnergyModuleLte LEM;
 
   /**
    * The `MibReceived` trace source. Fired upon reception of Master Information
@@ -852,12 +773,6 @@ private:
    * procedure. Exporting IMSI, cell ID, and RNTI.
    */
   TracedCallback<uint64_t, uint16_t, uint16_t> m_handoverEndErrorTrace;
-  /**
-   * The `SCarrierConfigured` trace source. Fired after the configuration
-   * of secondary carriers received through RRC Connection Reconfiguration
-   * message.
-   */
-  TracedCallback<Ptr<LteUeRrc>, std::list<LteRrcSap::SCellToAddMod> > m_sCarrierConfiguredTrace;
 
   /// True if a connection request by upper layers is pending.
   bool m_connectionPending;
@@ -868,6 +783,9 @@ private:
   /// True if SIB2 was received for the current cell.
   bool m_hasReceivedSib2;
 
+  bool m_hasReceivedPaging;
+
+
   /// Stored content of the last SIB1 received.
   LteRrcSap::SystemInformationBlockType1 m_lastSib1;
 
@@ -876,6 +794,55 @@ private:
 
   /// List of CSG ID which this UE entity has access to.
   uint32_t m_csgWhiteList;
+
+
+
+  /////////////////////////////////
+  // NB-IoT RRC attributes (begin)
+  /////////////////////////////////
+
+
+  /// True if MIB-NB was received for the current cell.
+  bool m_hasReceivedMibNb;
+  /// True if SIB1-NB was received for the current cell.
+  bool m_hasReceivedSib1Nb;
+
+  /// Stored content of the last SIB1-NB received.
+  NbLteRrcSap::SystemInformationBlockType1Nb m_lastSib1Nb;
+
+  /*
+   * todo
+   * This attribute must be enabled to avoid the call to the SwitchToState(CONNECTED_HANDOVER) method.
+   * That is needed because NB-IoT does not support handover.
+   *
+   * EnableNbIotManager is the method used to change the parameter value.
+   *
+   * In future this mechanism will change.
+   */
+  bool m_nbIotActiveMode = false;
+
+  /*
+   * This is the number of the NPDSCH repetitions of the SIB1-NB message. This attribute
+   * is sent over the MIB-NB message and it is related to the schedulingInfoSIB1 value.
+   * To get more information about this refer to the document 36.213, Table 16.4.1.3-3.
+   *
+   * todo
+   * The NPDSCH is not yet implemented, so remember to upgrade this code when it will be
+   * ready to use.
+   */
+  uint16_t m_numberOfNpdschRepetitions;
+
+  /*
+   * TBS of the SIB1-NB message, this value is derived from the content of the MIB-NB
+   * message and depends on the content of the schedulingInfoSIB1. To get more
+   * information about this refer to the document 36.213, Table 16.4.1.5.2-1.
+   */
+  uint32_t m_transportBlockSize;
+
+  /////////////////////////////////
+  // NB-IoT RRC attributes (end)
+  /////////////////////////////////
+
 
 
   // INTERNAL DATA STRUCTURE RELATED TO UE MEASUREMENTS
@@ -889,12 +856,12 @@ private:
    */
   struct VarMeasConfig
   {
-    std::map<uint8_t, LteRrcSap::MeasIdToAddMod> measIdList; ///< measure ID list
-    std::map<uint8_t, LteRrcSap::MeasObjectToAddMod> measObjectList; ///< measure object list
-    std::map<uint8_t, LteRrcSap::ReportConfigToAddMod> reportConfigList; ///< report config list
-    LteRrcSap::QuantityConfig quantityConfig; ///< quantity config
-    double aRsrp; ///< RSRP
-    double aRsrq; ///< RSRQ
+    std::map<uint8_t, LteRrcSap::MeasIdToAddMod> measIdList;
+    std::map<uint8_t, LteRrcSap::MeasObjectToAddMod> measObjectList;
+    std::map<uint8_t, LteRrcSap::ReportConfigToAddMod> reportConfigList;
+    LteRrcSap::QuantityConfig quantityConfig; 
+    double aRsrp;
+    double aRsrq;
   };
 
   /**
@@ -914,10 +881,10 @@ private:
    */
   struct VarMeasReport
   {
-    uint8_t measId; ///< measure ID
-    std::set<uint16_t> cellsTriggeredList; ///< note: only E-UTRA is supported.
-    uint32_t numberOfReportsSent; ///< number of reports sent
-    EventId periodicReportTimer; ///< periodic report timer
+    uint8_t measId;
+    std::set<uint16_t> cellsTriggeredList; // note: only E-UTRA is supported.
+    uint32_t numberOfReportsSent;
+    EventId periodicReportTimer;
   };
 
   /**
@@ -1010,9 +977,6 @@ private:
    */
   std::map<uint16_t, MeasValues> m_storedMeasValues;
 
-  /**
-   * \brief Stored measure values per carrier.
-   */
   std::map<uint16_t, std::map <uint8_t, MeasValues> > m_storedMeasValuesPerCarrier;
 
   /**
@@ -1027,7 +991,7 @@ private:
    * applied to the measurement results and they are used by *UE measurements*
    * function:
    * - LteUeRrc::MeasurementReportTriggering: in this case it is not set any
-   *   measurement related to seconday carrier components since the 
+   *   measurment related to seconday carrier components since the 
    *   A6 event is not implemented
    * - LteUeRrc::SendMeasurementReport: in this case the report are sent.
    */
@@ -1154,6 +1118,12 @@ private:
    * See Section 7.3 of 3GPP TS 36.331.
    */
   Time m_t300;
+
+  int32_t m_t3324_d;
+
+  int64_t m_t3412_d;
+
+  int32_t m_edrx_cycle_d;
 
   /**
    * \brief Invokes ConnectionEstablishmentTimeout() if RRC connection

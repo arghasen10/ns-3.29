@@ -90,6 +90,9 @@ void
 MultiModelSpectrumChannel::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
+  m_propagationDelay = 0;
+  m_propagationLoss = 0;
+  m_spectrumPropagationLoss = 0;
   m_txSpectrumModelInfoMap.clear ();
   m_rxSpectrumModelInfoMap.clear ();
   SpectrumChannel::DoDispose ();
@@ -102,7 +105,35 @@ MultiModelSpectrumChannel::GetTypeId (void)
     .SetParent<SpectrumChannel> ()
     .SetGroupName ("Spectrum")
     .AddConstructor<MultiModelSpectrumChannel> ()
-
+    .AddAttribute ("MaxLossDb",
+                   "If a single-frequency PropagationLossModel is used, "
+                   "this value represents the maximum loss in dB for which "
+                   "transmissions will be passed to the receiving PHY.  "
+                   "Signals for which the PropagationLossModel returns "
+                   "a loss bigger than this value will not be propagated "
+                   "to the receiver.  This parameter is to be used to reduce "
+                   "the computational load by not propagating signals that "
+                   "are far beyond the interference range. Note that the "
+                   "default value corresponds to considering all signals "
+                   "for reception. Tune this value with care. ",
+                   DoubleValue (1.0e9),
+                   MakeDoubleAccessor (&MultiModelSpectrumChannel::m_maxLossDb),
+                   MakeDoubleChecker<double> ())
+    .AddTraceSource ("PathLoss",
+                     "This trace is fired whenever a new path loss value "
+                     "is calculated. The first and second parameters "
+                     "to the trace are pointers respectively to the "
+                     "TX and RX SpectrumPhy instances, whereas the "
+                     "third parameters is the loss value in dB.  "
+                     "Note that the loss value reported by this trace is "
+                     "the single-frequency loss value obtained by evaluating "
+                     "only the TX and RX AntennaModels and the "
+                     "PropagationLossModel. In particular, note that "
+                     "SpectrumPropagationLossModel (even if present) "
+                     "is never used to evaluate the loss value "
+                     "reported in this trace. ",
+                     MakeTraceSourceAccessor (&MultiModelSpectrumChannel::m_pathLossTrace),
+                     "ns3::SpectrumChannel::LossTracedCallback")
   ;
   return tid;
 }
@@ -230,8 +261,7 @@ MultiModelSpectrumChannel::StartTx (Ptr<SpectrumSignalParameters> txParams)
 
   NS_ASSERT (txParams->txPhy);
   NS_ASSERT (txParams->psd);
-  Ptr<SpectrumSignalParameters> txParamsTrace = txParams->Copy (); // copy it since traced value cannot be const (because of potential underlying DynamicCasts)
-  m_txSigParamsTrace (txParamsTrace);
+
 
   Ptr<MobilityModel> txMobility = txParams->txPhy->GetMobility ();
   SpectrumModelUid_t txSpectrumModelUid = txParams->psd->GetSpectrumModelUid ();
@@ -360,25 +390,29 @@ MultiModelSpectrumChannel::StartRx (Ptr<SpectrumSignalParameters> params, Ptr<Sp
   receiver->StartRx (params);
 }
 
-std::size_t
+
+
+uint32_t
 MultiModelSpectrumChannel::GetNDevices (void) const
 {
   return m_numDevices;
+
 }
 
+
 Ptr<NetDevice>
-MultiModelSpectrumChannel::GetDevice (std::size_t i) const
+MultiModelSpectrumChannel::GetDevice (uint32_t i) const
 {
   NS_ASSERT (i < m_numDevices);
   // this method implementation is computationally intensive. This
   // method would be faster if we actually used a std::vector for
   // storing devices, which we don't due to the need to have fast 
-  // SpectrumModel conversions and to allow PHY devices to change a
+  // SpectrumModel conversions and to allow PHY devices to changea
   // SpectrumModel at run time. Note that having this method slow is
   // acceptable as it is not used much at run time (often not at all).
   // On the other hand, having slow SpectrumModel conversion would be
   // less acceptable. 
-  std::size_t j = 0;
+  uint32_t j = 0;
   for (RxSpectrumModelInfoMap_t::const_iterator rxInfoIterator = m_rxSpectrumModelInfoMap.begin ();
        rxInfoIterator !=  m_rxSpectrumModelInfoMap.end ();
        ++rxInfoIterator)
@@ -397,5 +431,37 @@ MultiModelSpectrumChannel::GetDevice (std::size_t i) const
   NS_FATAL_ERROR ("m_numDevice > actual number of devices");
   return 0;
 }
+
+
+
+void
+MultiModelSpectrumChannel::AddPropagationLossModel (Ptr<PropagationLossModel> loss)
+{
+  NS_LOG_FUNCTION (this << loss);
+  NS_ASSERT (m_propagationLoss == 0);
+  m_propagationLoss = loss;
+}
+
+void
+MultiModelSpectrumChannel::AddSpectrumPropagationLossModel (Ptr<SpectrumPropagationLossModel> loss)
+{
+  NS_ASSERT (m_spectrumPropagationLoss == 0);
+  m_spectrumPropagationLoss = loss;
+}
+
+void
+MultiModelSpectrumChannel::SetPropagationDelayModel (Ptr<PropagationDelayModel> delay)
+{
+  NS_ASSERT (m_propagationDelay == 0);
+  m_propagationDelay = delay;
+}
+
+Ptr<SpectrumPropagationLossModel>
+MultiModelSpectrumChannel::GetSpectrumPropagationLossModel (void)
+{
+  NS_LOG_FUNCTION (this);
+  return m_spectrumPropagationLoss;
+}
+
 
 } // namespace ns3

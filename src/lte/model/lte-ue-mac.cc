@@ -243,7 +243,6 @@ LteUeMac::LteUeMac ()
       m_miUlHarqProcessesPacket.at (i) = pb;
     }
   m_miUlHarqProcessesPacketTimer.resize (HARQ_PERIOD, 0);
-   
   m_macSapProvider = new UeMemberLteMacSapProvider (this);
   m_cmacSapProvider = new UeMemberLteUeCmacSapProvider (this);
   m_uePhySapUser = new UeMemberLteUePhySapUser (this);
@@ -261,6 +260,8 @@ void
 LteUeMac::DoDispose ()
 {
   NS_LOG_FUNCTION (this);
+
+
   m_miUlHarqProcessesPacket.clear ();
   delete m_macSapProvider;
   delete m_cmacSapProvider;
@@ -317,6 +318,7 @@ LteUeMac::DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params)
   m_miUlHarqProcessesPacket.at (m_harqProcessId)->AddPacket (params.pdu);
   m_miUlHarqProcessesPacketTimer.at (m_harqProcessId) = HARQ_PERIOD;
   m_uePhySapProvider->SendMacPdu (params.pdu);
+  m_cmacSapUser->NotifyEnergyChange();
 }
 
 void
@@ -609,7 +611,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
       UlDciListElement_s dci = msg2->GetDci ();
       if (dci.m_ndi == 1)
         {
-          // New transmission -> empty pkt buffer queue (for deleting eventual pkts not acked )
+          // New transmission -> emtpy pkt buffer queue (for deleting eventual pkts not acked )
           Ptr<PacketBurst> pb = CreateObject <PacketBurst> ();
           m_miUlHarqProcessesPacket.at (m_harqProcessId) = pb;
           // Retrieve data from RLC
@@ -685,7 +687,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                             }
                         }
                         
-                      if ((bytesForThisLc > 7)    // 7 is the min TxOpportunity useful for Rlc
+                      if ((bytesForThisLc >= 7)    // 7 is the min TxOpportunity useful for Rlc
                           && (((*itBsr).second.retxQueueSize > 0)
                               || ((*itBsr).second.txQueueSize > 0)))
                         {
@@ -736,7 +738,7 @@ LteUeMac::DoReceiveLteControlMessage (Ptr<LteControlMessage> msg)
                           if ( ((*itBsr).second.retxQueueSize > 0) || ((*itBsr).second.txQueueSize > 0)) 
                             {
                               // resend BSR info for updating eNB peer MAC
-                              m_freshUlBsr = true;
+                              //m_freshUlBsr = true;
                             }
                         }
                       NS_LOG_LOGIC (this << "\t" << bytesPerActiveLc << "\t new queues " << (uint32_t)(*it).first << " statusQueue " << (*itBsr).second.statusPduSize << " retxQueue" << (*itBsr).second.retxQueueSize << " txQueue" <<  (*itBsr).second.txQueueSize);
@@ -820,15 +822,15 @@ LteUeMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
   NS_LOG_FUNCTION (this);
   m_frameNo = frameNo;
   m_subframeNo = subframeNo;
+  m_cmacSapUser->SetFrameSubframe(m_frameNo,m_subframeNo);  // Transfer the SF, SFN to RRC
   RefreshHarqProcessesPacketBuffer ();
   if ((Simulator::Now () >= m_bsrLast + m_bsrPeriodicity) && (m_freshUlBsr == true))
     {
       SendReportBufferStatus ();
       m_bsrLast = Simulator::Now ();
       m_freshUlBsr = false;
+      m_harqProcessId = (m_harqProcessId + 1) % HARQ_PERIOD;
     }
-  m_harqProcessId = (m_harqProcessId + 1) % HARQ_PERIOD;
-
 }
 
 int64_t

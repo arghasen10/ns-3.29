@@ -45,7 +45,6 @@ public:
 
   /**
    * Create a phy helper in a default working state.
-   * \returns a default SpectrumWifPhyHelper
    */
   static SpectrumWifiPhyHelper Default (void);
 
@@ -72,7 +71,7 @@ private:
    */
   virtual Ptr<WifiPhy> Create (Ptr<Node> node, Ptr<NetDevice> device) const;
 
-  Ptr<SpectrumChannel> m_channel; ///< the channel
+  Ptr<SpectrumChannel> m_channel;
 };
 
 } //namespace ns3

@@ -18,60 +18,43 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
-#include "ns3/packet.h"
+#include "ns3/yans-wifi-channel.h"
+#include "ns3/propagation-loss-model.h"
+#include "ns3/propagation-delay-model.h"
+#include "ns3/nist-error-rate-model.h"
 #include "ns3/constant-position-mobility-model.h"
 #include "ns3/simulator.h"
 #include "ns3/command-line.h"
 #include "ns3/flow-id-tag.h"
-#include "ns3/yans-wifi-channel.h"
-#include "ns3/yans-wifi-phy.h"
-#include "ns3/propagation-loss-model.h"
-#include "ns3/propagation-delay-model.h"
-#include "ns3/nist-error-rate-model.h"
 
 using namespace ns3;
 
-/// PsrExperiment
 class PsrExperiment
 {
 public:
-  /// Input structure
   struct Input
   {
     Input ();
-    double distance; ///< distance
-    std::string txMode; ///< transmit mode
-    uint8_t txPowerLevel; ///< transmit power level
-    uint32_t packetSize; ///< packet size
-    uint32_t nPackets; ///< number of packets
+    double distance;
+    std::string txMode;
+    uint8_t txPowerLevel;
+    uint32_t packetSize;
+    uint32_t nPackets;
   };
-  /// Output structure
   struct Output
   {
-    uint32_t received; ///< received
+    uint32_t received;
   };
   PsrExperiment ();
 
-  /**
-   * Run function
-   * \param input the PSR experiment
-   * \returns the PSR experiment output
-   */
   struct PsrExperiment::Output Run (struct PsrExperiment::Input input);
 
 private:
-  /// Send function
   void Send (void);
-  /**
-   * Send receive function
-   * \param p the packet
-   * \param snr the SNR
-   * \param txVector the wifi transmit vector
-   */
   void Receive (Ptr<Packet> p, double snr, WifiTxVector txVector);
-  Ptr<WifiPhy> m_tx; ///< transmit
-  struct Input m_input; ///< input
-  struct Output m_output; ///< output
+  Ptr<WifiPhy> m_tx;
+  struct Input m_input;
+  struct Output m_output;
 };
 
 void
@@ -145,57 +128,42 @@ PsrExperiment::Run (struct PsrExperiment::Input input)
   return m_output;
 }
 
-/// CollisionExperiment
+
 class CollisionExperiment
 {
 public:
-  /// Input structure
   struct Input
   {
     Input ();
-    Time interval; ///< interval
-    double xA; ///< x A
-    double xB; ///< x B
-    std::string txModeA; ///< transmit mode A
-    std::string txModeB; ///< transmit mode B
-    uint8_t txPowerLevelA; ///< transmit power level A
-    uint8_t txPowerLevelB; ///< transmit power level B
-    uint32_t packetSizeA; ///< packet size A
-    uint32_t packetSizeB; ///< packet size B
-    uint32_t nPackets; ///< number of packets
+    Time interval;
+    double xA;
+    double xB;
+    std::string txModeA;
+    std::string txModeB;
+    uint8_t txPowerLevelA;
+    uint8_t txPowerLevelB;
+    uint32_t packetSizeA;
+    uint32_t packetSizeB;
+    uint32_t nPackets;
   };
-  /// Output struture
   struct Output
   {
-    uint32_t receivedA; ///< received A
-    uint32_t receivedB; ///< received B
+    uint32_t receivedA;
+    uint32_t receivedB;
   };
   CollisionExperiment ();
 
-  /**
-   * Run function
-   * \param input the collision experiment data
-   * \returns the experiment output
-   */
   struct CollisionExperiment::Output Run (struct CollisionExperiment::Input input);
 private:
-  /// Send A function
   void SendA (void) const;
-  /// Send B function
   void SendB (void) const;
-  /**
-   * Receive function
-   * \param p the packet
-   * \param snr the SNR
-   * \param txVector the wifi transmit vector
-   */
   void Receive (Ptr<Packet> p, double snr, WifiTxVector txVector);
-  Ptr<WifiPhy> m_txA; ///< transmit A
-  Ptr<WifiPhy> m_txB; ///< transmit B
-  uint32_t m_flowIdA; ///< flow ID A
-  uint32_t m_flowIdB; ///< flow ID B
-  struct Input m_input; ///< input
-  struct Output m_output; ///< output
+  Ptr<WifiPhy> m_txA;
+  Ptr<WifiPhy> m_txB;
+  uint32_t m_flowIdA;
+  uint32_t m_flowIdB;
+  struct Input m_input;
+  struct Output m_output;
 };
 
 void

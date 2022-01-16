@@ -25,14 +25,13 @@
 #include "ns3/object-factory.h"
 #include "ns3/regular-wifi-mac.h"
 #include "ns3/wifi-mac-queue.h"
+#include "ns3/qos-utils.h"
 #include "vendor-specific-action.h"
 #include "wave-net-device.h"
 
 namespace ns3 {
-
 class OrganizationIdentifier;
 class WaveNetDevice;
-
 /**
  * \brief STAs communicate with each directly outside the context of a BSS
  * \ingroup wave
@@ -49,10 +48,6 @@ class WaveNetDevice;
 class OcbWifiMac : public RegularWifiMac
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
   OcbWifiMac (void);
   virtual ~OcbWifiMac (void);
@@ -99,6 +94,8 @@ public:
    */
   virtual void SetBssid (Mac48Address bssid);
   /**
+   * \param bssid the BSSID of the network that this device belongs to.
+   *
    * This method shall not be used in WAVE environment and
    * here it will overloaded to log warn message
    */
@@ -178,7 +175,7 @@ protected:
 private:
   virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
 
-  VendorSpecificContentManager m_vscManager; ///< VSC manager
+  VendorSpecificContentManager m_vscManager;
 };
 
 }

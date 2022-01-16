@@ -28,6 +28,7 @@
 #include <ns3/simulator.h>
 #include <ns3/double.h>
 #include "lte-ue-phy.h"
+#include "lte-ue-cphy-sap.h"
 #include "lte-enb-phy.h"
 #include "lte-net-device.h"
 #include "lte-ue-net-device.h"
@@ -165,6 +166,7 @@ LteUePhy::LteUePhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
   m_uePhySapProvider = new UeMemberLteUePhySapProvider (this);
   m_ueCphySapProvider = new MemberLteUeCphySapProvider<LteUePhy> (this);
   m_macChTtiDelay = UL_PUSCH_TTIS_DELAY;
+  m_macChRxTtiDelay = DL_PDSCH_TTIS_DELAY;
 
   NS_ASSERT_MSG (Simulator::Now ().GetNanoSeconds () == 0,
                  "Cannot create UE devices after simulation started");
@@ -416,6 +418,7 @@ void
 LteUePhy::DoSendMacPdu (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this);
+  std::cout<< Simulator::Now().GetSeconds()<<" "<<m_rnti<<" LteUePhy::DoSendMacPdu Packet_size: "<<p->GetSize()<<std::endl;
 
   SetMacPdu (p);
 }
@@ -895,94 +898,143 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           std::vector <int> dlRb;
 
           // translate the DCI to Spectrum framework
-          uint32_t mask = 0x1;
-          for (int i = 0; i < 32; i++)
-            {
-              if (((dci.m_rbBitmap & mask) >> i) == 1)
-                {
-                  for (int k = 0; k < GetRbgSize (); k++)
-                    {
-                      dlRb.push_back ((i * GetRbgSize ()) + k);
-//             NS_LOG_DEBUG(this << " RNTI " << m_rnti << " RBG " << i << " DL-DCI allocated PRB " << (i*GetRbgSize()) + k);
-                    }
-                }
-              mask = (mask << 1);
-            }
-          if (m_enableUplinkPowerControl)
-            {
-              m_powerControl->ReportTpc (dci.m_tpc);
-            }
+           uint32_t mask = 0x1;
+           for (int i = 0; i < 32; i++)
+             {
+               if (((dci.m_rbBitmap & mask) >> i) == 1)
+                 {
+                   for (int k = 0; k < GetRbgSize (); k++)
+                     {
+                       //dlRb.push_back ((i * GetRbgSize ()) + k);
+                       NS_LOG_DEBUG(this << " RNTI " << m_rnti << " RBG " << i << " [ue]DL-DCI allocated PRB " << (i*GetRbgSize()) + k);
+                      }
+                 }
+               mask = (mask << 1);
+             }
+           //=================================================================================
+           int N_rb_dl = m_dlBandwidth;//m_dlBandwidth;
+           int N_prb = dci.m_riv/N_rb_dl + 1;
+           int RB_start = dci.m_riv % N_rb_dl;
+           int repetitionNumber = dci.m_repetitionNumber;
 
+           for (int j = 0; j < N_prb; j++)
+           {
+             dlRb.push_back (RB_start + j);
+           }
+           QueueSubChannelsForReception (dlRb);
+           //dlRb.push_back (dci.m_riv % 100);
+           NS_LOG_DEBUG(this << " RNTI " << m_rnti << " [ue]DL-DCI allocated PRB " << dci.m_riv % 100 << " N_prb:" << N_prb << " repetitionNumber: " << repetitionNumber);
+           QueueDlDci (*msg2);
 
-          // send TB info to LteSpectrumPhy
-          NS_LOG_DEBUG (this << " UE " << m_rnti << " DL-DCI " << dci.m_rnti << " bitmap "  << dci.m_rbBitmap);
-          for (uint8_t i = 0; i < dci.m_tbsSize.size (); i++)
-            {
-              m_downlinkSpectrumPhy->AddExpectedTb (dci.m_rnti, dci.m_ndi.at (i), dci.m_tbsSize.at (i), dci.m_mcs.at (i), dlRb, i, dci.m_harqProcess, dci.m_rv.at (i), true /* DL */);
-            }
+           //=================================================================================
 
-          SetSubChannelsForReception (dlRb);
+           if (m_enableUplinkPowerControl)
+           {
+               m_powerControl->ReportTpc (dci.m_tpc);
+           }
 
+           //=============================================================================================================
+           if(m_subChannelsForReceptionQueue.size()!=0 && m_dlDciQueue.size()!=0)
+           {
+             std::vector <int> dlRb = m_subChannelsForReceptionQueue.at (0);
+             SetSubChannelsForReception (dlRb);
+             // shift the queue
+             for (uint8_t i = 1; i < m_macChRxTtiDelay; i++)
+             {
+                 m_subChannelsForReceptionQueue.at (i-1) = m_subChannelsForReceptionQueue.at (i);
+             }
+             m_subChannelsForReceptionQueue.at (m_macChRxTtiDelay-1).clear ();
+             std::list<DlDciLteControlMessage> dldcilist = DequeueDlDci ();
+             std::list<DlDciLteControlMessage>::iterator dciIt = dldcilist.begin ();
+             NS_LOG_DEBUG (this << " Ue Expected TBs " << dldcilist.size ());
+             for (dciIt = dldcilist.begin (); dciIt!=dldcilist.end (); dciIt++)
+             {
+                 // send info of TB to LteSpectrumPhy
+                 NS_LOG_DEBUG (this << " UE " << m_rnti << " DL-DCI " << (*dciIt).GetDci ().m_rnti << " bitmap "  << (*dciIt).GetDci ().m_rbBitmap << " old DCI repetition: " << (*dciIt).GetDci ().m_repetitionNumber);
+                 for (uint8_t i = 0; i < (*dciIt).GetDci ().m_tbsSize.size (); i++)
+                 {
+                   m_downlinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_ndi.at (i), (*dciIt).GetDci ().m_tbsSize.at (i), (*dciIt).GetDci ().m_mcs.at (i), dlRb, i, (*dciIt).GetDci ().m_harqProcess, (*dciIt).GetDci ().m_rv.at (i), true);
+                 }
+             }
+           }
+         }
+       else if (msg->GetMessageType () == LteControlMessage::UL_DCI)
+       {
+           Ptr<UlDciLteControlMessage> msg2 = DynamicCast<UlDciLteControlMessage> (msg);
+           UlDciListElement_s dci = msg2->GetDci ();
+           if (dci.m_rnti != m_rnti)
+             {
+               // DCI not for me
+               continue;
+             }
+           std::vector <int> ulRb;
 
-        }
-      else if (msg->GetMessageType () == LteControlMessage::UL_DCI)
-        {
-          // set the uplink bandwidth according to the UL-CQI
-          Ptr<UlDciLteControlMessage> msg2 = DynamicCast<UlDciLteControlMessage> (msg);
-          UlDciListElement_s dci = msg2->GetDci ();
-          if (dci.m_rnti != m_rnti)
-            {
-              // DCI not for me
-              continue;
-            }
-          NS_LOG_INFO (this << " UL DCI");
-          std::vector <int> ulRb;
-          for (int i = 0; i < dci.m_rbLen; i++)
-            {
-              ulRb.push_back (i + dci.m_rbStart);
-              //NS_LOG_DEBUG (this << " UE RB " << i + dci.m_rbStart);
-            }
-          QueueSubChannelsForTransmission (ulRb);
-          // fire trace of UL Tx PHY stats
-          HarqProcessInfoList_t harqInfoList = m_harqPhyModule->GetHarqProcessInfoUl (m_rnti, 0);
-          PhyTransmissionStatParameters params;
-          params.m_cellId = m_cellId;
-          params.m_imsi = 0; // it will be set by DlPhyTransmissionCallback in LteHelper
-          params.m_timestamp = Simulator::Now ().GetMilliSeconds () + UL_PUSCH_TTIS_DELAY;
-          params.m_rnti = m_rnti;
-          params.m_txMode = 0; // always SISO for UE
-          params.m_layer = 0;
-          params.m_mcs = dci.m_mcs;
-          params.m_size = dci.m_tbSize;
-          params.m_rv = harqInfoList.size ();
-          params.m_ndi = dci.m_ndi;
-          params.m_ccId = m_componentCarrierId;
-          m_ulPhyTransmission (params);
-          // pass the info to the MAC
-          m_uePhySapUser->ReceiveLteControlMessage (msg);
-        }
-      else if (msg->GetMessageType () == LteControlMessage::RAR)
-        {
-          Ptr<RarLteControlMessage> rarMsg = DynamicCast<RarLteControlMessage> (msg);
-          if (rarMsg->GetRaRnti () == m_raRnti)
-            {
-              for (std::list<RarLteControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
-                {
-                  if (it->rapId != m_raPreambleId)
-                    {
-                      // UL grant not for me
-                      continue;
-                    }
-                  else
-                    {
-                      NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
-                      // set the uplink bandwidth according to the UL grant
-                      std::vector <int> ulRb;
-                      for (int i = 0; i < it->rarPayload.m_grant.m_rbLen; i++)
-                        {
-                          ulRb.push_back (i + it->rarPayload.m_grant.m_rbStart);
-                        }
+           //=================================================================================
+           int N_rb_ul = m_ulBandwidth;//m_dlBandwidth;
+           int N_prb = dci.m_riv/N_rb_ul + 1;
+           int RB_start = dci.m_riv % N_rb_ul;
+           int repetitionNumber = dci.m_repetitionNumber;
+           for (int j = 0; j < N_prb; j++)
+           {
+             ulRb.push_back (RB_start + j);
+           }
 
+           QueueSubChannelsForTransmission (ulRb);
+
+           NS_LOG_DEBUG(this << " RNTI " << m_rnti << " [ue]UL-DCI allocated PRB " << dci.m_riv % 100 << " N_prb:" << N_prb << " repetitionNumber: " << repetitionNumber);
+
+           //=================================================================================          // fire trace of UL Tx PHY stats
+           HarqProcessInfoList_t harqInfoList = m_harqPhyModule->GetHarqProcessInfoUl (m_rnti, 0);
+           PhyTransmissionStatParameters params;
+           params.m_cellId = m_cellId;
+           params.m_imsi = 0; // it will be set by DlPhyTransmissionCallback in LteHelper
+           params.m_timestamp = Simulator::Now ().GetMilliSeconds () + UL_PUSCH_TTIS_DELAY;
+           params.m_rnti = m_rnti;
+           params.m_txMode = 0; // always SISO for UE
+           params.m_layer = 0;
+           params.m_mcs = dci.m_mcs;
+           params.m_size = dci.m_tbSize;
+           params.m_rv = harqInfoList.size ();
+           params.m_ndi = dci.m_ndi;
+           params.m_ccId = m_componentCarrierId;
+           m_ulPhyTransmission (params);
+
+           // pass the info to the MAC
+           m_uePhySapUser->ReceiveLteControlMessage (msg);
+         }
+       else if (msg->GetMessageType () == LteControlMessage::RAR)
+         {
+           Ptr<RarLteControlMessage> rarMsg = DynamicCast<RarLteControlMessage> (msg);
+           if (rarMsg->GetRaRnti () == m_raRnti)
+           {
+               for (std::list<RarLteControlMessage::Rar>::const_iterator it = rarMsg->RarListBegin (); it != rarMsg->RarListEnd (); ++it)
+               {
+                   if (it->rapId != m_raPreambleId)
+                   {
+                       // UL grant not for me
+                       continue;
+                   }
+                   else
+                   {
+                       NS_LOG_INFO ("received RAR RNTI " << m_raRnti);
+                       // set the uplink bandwidht according to the UL grant
+                       std::vector <int> ulRb;
+                       /*for (int i = 0; i < it->rarPayload.m_grant.m_rbLen; i++)
+                         {
+                           ulRb.push_back (i + it->rarPayload.m_grant.m_rbStart);
+                         }*/
+
+                      int N_rb_ul = m_ulBandwidth;
+                      int N_prb = it->rarPayload.m_grant.m_riv/N_rb_ul + 1;
+                      int RB_start = it->rarPayload.m_grant.m_riv % N_rb_ul;
+                      for (int j = 0; j < N_prb; j++)
+                      {
+                        ulRb.push_back (RB_start + j);
+                      }
+#ifdef DCI_BW_DEBUG
+                      int repetitionNumber = it->rarPayload.m_grant.m_repetitionNumber;
+                      std::cout << " RNTI " << m_rnti << " m_ulBandwidth " << (int)m_ulBandwidth << " N_prb:" << N_prb << " RB_start:" << RB_start << " rarPayload.m_grant.m_riv:" << it->rarPayload.m_grant.m_riv << " rarPayload.m_grant.m_riv/N_rb_ul:" << it->rarPayload.m_grant.m_riv/N_rb_ul << "   " << repetitionNumber << "\n";
+#endif
                       QueueSubChannelsForTransmission (ulRb);
                       // pass the info to the MAC
                       m_uePhySapUser->ReceiveLteControlMessage (msg);
@@ -1007,17 +1059,38 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           Ptr<Sib1LteControlMessage> msg2 = DynamicCast<Sib1LteControlMessage> (msg);
           m_ueCphySapUser->RecvSystemInformationBlockType1 (m_cellId, msg2->GetSib1 ());
         }
-      else
+       else if (msg->GetMessageType () == LteControlMessage::MIB_NB) // Needed to manage NB-IoT devices. 3GPP Release 13.
+       {
+           NS_LOG_INFO ("received MIB_NB");
+           NS_ASSERT (m_cellId > 0);
+           Ptr<MibNbLteControlMessage> msg2 = DynamicCast<MibNbLteControlMessage> (msg);
+           m_ueCphySapUser-> RecvMasterInformationBlockNb (m_cellId, msg2->GetMibNb ());
+       }
+        else if (msg->GetMessageType () == LteControlMessage::SIB1_NB) // Needed to manage NB-IoT devices. 3GPP Release 13.
         {
-          // pass the message to UE-MAC
-          m_uePhySapUser->ReceiveLteControlMessage (msg);
+            NS_LOG_INFO ("received SIB1_NB");
+            NS_ASSERT (m_cellId > 0);
+            Ptr<Sib1NbLteControlMessage> msg2 = DynamicCast<Sib1NbLteControlMessage> (msg);
+            m_ueCphySapUser-> RecvSystemInformationBlockType1Nb (m_cellId, msg2->GetSib1Nb ());
         }
+        else if(msg->GetMessageType () == LteControlMessage::PAGING)
+        {
+            NS_LOG_INFO ("received Paging");
+            Ptr<PagingLteControlMessage> msg2 = DynamicCast<PagingLteControlMessage> (msg);
+            m_ueCphySapUser-> RecvPagingInformation (m_cellId, msg2->GetPaging ());
 
-    }
+             //DoRecvPagingInformation        */
+        }
+       else
+       {
+           // pass the message to UE-MAC
+           m_uePhySapUser->ReceiveLteControlMessage (msg);
+       }
+
+     }
 
 
-}
-
+ }
 
 void
 LteUePhy::ReceivePss (uint16_t cellId, Ptr<SpectrumValue> p)
@@ -1079,6 +1152,20 @@ LteUePhy::QueueSubChannelsForTransmission (std::vector <int> rbMap)
   m_subChannelsForTransmissionQueue.at (m_macChTtiDelay - 1) = rbMap;
 }
 
+void
+LteUePhy::QueueSubChannelsForReception (std::vector <int> rbMap)
+{
+  NS_LOG_FUNCTION (this << (int)m_macChRxTtiDelay);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_ulConfigured ===> m_subChannelsForReceptionQueue.size():" << m_subChannelsForReceptionQueue.size() << " m_subChannelsForReceptionQueue.at (m_macChRxTtiDelay - 1) " << m_subChannelsForReceptionQueue.at (m_macChRxTtiDelay - 1).size() << "\n";
+  std::cout << "m_macChRxTtiDelay:" << (int)m_macChRxTtiDelay << "\n";
+#endif
+  m_subChannelsForReceptionQueue.at (m_macChRxTtiDelay - 1) = rbMap;
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_ulConfigured ===> m_subChannelsForReceptionQueue.size():" << m_subChannelsForReceptionQueue.size() << " m_subChannelsForReceptionQueue.at (m_macChRxTtiDelay - 1) " << m_subChannelsForReceptionQueue.at (m_macChRxTtiDelay - 1).size() << "\n";
+#endif  
+}
+
 
 void
 LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
@@ -1094,6 +1181,41 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
 
   if (m_ulConfigured)
     {
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+      std::cout << "m_ulConfigured ===> m_subChannelsForReceptionQueue.size():" << m_subChannelsForReceptionQueue.size() << "\n";
+#endif
+      //============================================================================================
+      // update dllink reception mask according to previous DL-CQIs
+      //std::vector <int> rbMask = m_subChannelsForReceptionQueue.at (0);
+/*      if(m_subChannelsForReceptionQueue.size()!=0 && m_dlDciQueue.size()!=0)
+      {
+        std::vector <int> dlRb = m_subChannelsForReceptionQueue.at (0);
+        SetSubChannelsForReception (dlRb);
+        // shift the queue
+        for (uint8_t i = 1; i < m_macChRxTtiDelay; i++)
+          {
+            m_subChannelsForReceptionQueue.at (i-1) = m_subChannelsForReceptionQueue.at (i);
+          }
+        m_subChannelsForReceptionQueue.at (m_macChRxTtiDelay-1).clear ();
+        std::cout << "update info on TB to be received \n";
+        // update info on TB to be received
+        std::list<DlDciLteControlMessage> dldcilist = DequeueDlDci ();
+        std::list<DlDciLteControlMessage>::iterator dciIt = dldcilist.begin ();
+        NS_LOG_DEBUG (this << " Ue Expected TBs " << dldcilist.size ());
+        for (dciIt = dldcilist.begin (); dciIt!=dldcilist.end (); dciIt++)
+          {
+            // send info of TB to LteSpectrumPhy 
+            NS_LOG_DEBUG (this << " UE " << m_rnti << " DL-DCI " << (*dciIt).GetDci ().m_rnti << " bitmap "  << (*dciIt).GetDci ().m_rbBitmap);
+            for (uint8_t i = 0; i < (*dciIt).GetDci ().m_tbsSize.size (); i++)
+            {
+              m_downlinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_ndi.at (i), (*dciIt).GetDci ().m_tbsSize.at (i), (*dciIt).GetDci ().m_mcs.at (i), dlRb, i, (*dciIt).GetDci ().m_harqProcess, (*dciIt).GetDci ().m_rv.at (i), true);
+            }   
+          }
+      }*/
+      //============================================================================================
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+      std::cout << "[UE] update uplink transmission mask according to previous UL-CQIs m_rnti:" << m_rnti <<  " \n";
+#endif
       // update uplink transmission mask according to previous UL-CQIs
       std::vector <int> rbMask = m_subChannelsForTransmissionQueue.at (0);
       SetSubChannelsForTransmission (m_subChannelsForTransmissionQueue.at (0));
@@ -1107,7 +1229,6 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
 
       if (m_srsConfigured && (m_srsStartTime <= Simulator::Now ()))
         {
-
           NS_ASSERT_MSG (subframeNo > 0 && subframeNo <= 10, "the SRS index check code assumes that subframeNo starts at 1");
           if ((((frameNo-1)*10 + (subframeNo-1)) % m_srsPeriodicity) == m_srsSubframeOffset)
             {
@@ -1118,7 +1239,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
             }
         }
 
-      std::list<Ptr<LteControlMessage> > ctrlMsg = GetControlMessages ();
+      std::list<Ptr<LteControlMessage> > ctrlMsg = GetControlMessages (subframeNo);
       // send packets in queue
       NS_LOG_LOGIC (this << " UE - start slot for PUSCH + PUCCH - RNTI " << m_rnti << " CELLID " << m_cellId);
       // send the current burts of packets
@@ -1130,6 +1251,8 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
               m_txPower = m_powerControl->GetPuschTxPower (rbMask);
               SetSubChannelsForTransmission (rbMask);
             }
+          NS_LOG_LOGIC (this << " UE - StartTxDataFrame " << " -->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->");
+
           m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
         }
       else
@@ -1137,14 +1260,14 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
           // send only PUCCH (ideal: fake null bandwidth signal)
           if (ctrlMsg.size ()>0)
             {
-              NS_LOG_LOGIC (this << " UE - start TX PUCCH (NO PUSCH)");
+              NS_LOG_LOGIC (this << " UE - start TX PUCCH (NO PUSCH) ");
               std::vector <int> dlRb;
 
               if (m_enableUplinkPowerControl)
                 {
                   m_txPower = m_powerControl->GetPucchTxPower (dlRb);
                 }
-
+              NS_LOG_LOGIC (this << " UE - StartTxDataFrame TX PUCCH (NO PUSCH) " << " -->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->-->");
               SetSubChannelsForTransmission (dlRb);
               m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
             }
@@ -1178,10 +1301,27 @@ LteUePhy::SendSrs ()
   NS_ASSERT (m_cellId > 0);
   // set the current tx power spectral density (full bandwidth)
   std::vector <int> dlRb;
-  for (uint8_t i = 0; i < m_ulBandwidth; i++)
-    {
-      dlRb.push_back (i);
-    }
+  int rb_len = m_ulBandwidth; //32
+  int rb_start = 0;
+  /*if((m_cellId % 3) == 1)
+  {
+    rb_start = 0;
+  }
+  else if((m_cellId % 3) ==  2)
+  {
+    rb_start = m_ulBandwidth/3; //32
+  }
+  else if((m_cellId % 3) ==  0)
+  {
+    rb_start = m_ulBandwidth/3 + m_ulBandwidth/3;//64
+    rb_len = m_ulBandwidth/3;  //36
+  }*/
+  for (uint8_t i = 0; i < rb_len; i++)
+  {
+    dlRb.push_back (rb_start + i);
+  }
+
+
 
   if (m_enableUplinkPowerControl)
     {
@@ -1213,16 +1353,27 @@ LteUePhy::DoReset ()
 
   m_packetBurstQueue.clear ();
   m_controlMessagesQueue.clear ();
+  m_dlControlMessagesQueue.clear();
   m_subChannelsForTransmissionQueue.clear ();
+  m_subChannelsForReceptionQueue.clear();
   for (int i = 0; i < m_macChTtiDelay; i++)
     {
       Ptr<PacketBurst> pb = CreateObject <PacketBurst> ();
       m_packetBurstQueue.push_back (pb);
       std::list<Ptr<LteControlMessage> > l;
       m_controlMessagesQueue.push_back (l);
+      m_dlControlMessagesQueue.push_back (l);
     }
   std::vector <int> ulRb;
   m_subChannelsForTransmissionQueue.resize (m_macChTtiDelay, ulRb);
+  std::vector <int> dlRb;
+  m_subChannelsForReceptionQueue.resize(m_macChRxTtiDelay, dlRb);
+
+  for (int i = 0; i < DL_PDSCH_TTIS_DELAY; i++)
+    {
+      std::list<DlDciLteControlMessage> l1;
+      m_dlDciQueue.push_back (l1);
+    }
 
   m_sendSrsEvent.Cancel ();
   m_downlinkSpectrumPhy->Reset ();
@@ -1292,12 +1443,14 @@ LteUePhy::DoSetDlBandwidth (uint8_t dlBandwidth)
               break;
             }
         }
+      m_rbgSize = 1;
 
       m_noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_dlEarfcn, m_dlBandwidth, m_noiseFigure);
       m_downlinkSpectrumPhy->SetNoisePowerSpectralDensity (m_noisePsd);
       m_downlinkSpectrumPhy->GetChannel ()->AddRx (m_downlinkSpectrumPhy);
     }
   m_dlConfigured = true;
+  //std::cout << "m_rbgSize:"  << (int)m_rbgSize << " dlBandwidth:" << (int)dlBandwidth << "\n";
 }
 
 
@@ -1395,6 +1548,53 @@ void
 LteUePhy::SetTxMode7Gain (double gain)
 {
   SetTxModeGain (7, gain);
+}
+
+
+
+std::list<DlDciLteControlMessage>
+LteUePhy::DequeueDlDci (void)
+{
+  NS_LOG_FUNCTION (this);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "LteUePhy::QueueDlDci:  m_dlDciQueue.size(): " << m_dlDciQueue.size() << " m_dlDciQueue.at (0).size(): " << m_dlDciQueue.at (0).size() << "\n";
+#endif  
+  if (m_dlDciQueue.at (0).size ()>0)
+    {
+      std::list<DlDciLteControlMessage> ret = m_dlDciQueue.at (0);
+      m_dlDciQueue.erase (m_dlDciQueue.begin ());
+      std::list<DlDciLteControlMessage> l;
+      m_dlDciQueue.push_back (l);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+      std::cout << "LteUePhy::QueueDlDci:  m_dlDciQueue.size(): " << m_dlDciQueue.size() << " m_dlDciQueue.at (0).size(): " << m_dlDciQueue.at (0).size() << "\n\n";
+#endif      
+      return (ret);
+    }
+  else
+    {
+      m_dlDciQueue.erase (m_dlDciQueue.begin ());
+      std::list<DlDciLteControlMessage> l;
+      m_dlDciQueue.push_back (l);
+      std::list<DlDciLteControlMessage> emptylist;
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+      std::cout << "LteUePhy::QueueDlDci:  m_dlDciQueue.size(): " << m_dlDciQueue.size() << " m_dlDciQueue.at (0).size(): " << m_dlDciQueue.at (0).size() << "\n\n";
+#endif      
+      return (emptylist);
+    }
+
+}
+
+void
+LteUePhy::QueueDlDci (DlDciLteControlMessage m)
+{
+  NS_LOG_FUNCTION (this);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "LteUePhy::QueueDlDci:  m_dlDciQueue.size(): " << m_dlDciQueue.size() << " m_dlDciQueue.at (0).size(): " << m_dlDciQueue.at (0).size() << "\n";
+#endif  
+  m_dlDciQueue.at (DL_PDSCH_TTIS_DELAY - 1).push_back (m);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "LteUePhy::QueueDlDci:  m_dlDciQueue.size(): " << m_dlDciQueue.size() << " m_dlDciQueue.at (0).size(): " << m_dlDciQueue.at (0).size() << "\n\n";
+#endif
 }
 
 

@@ -19,10 +19,8 @@
 #include "ns3/log.h"
 #include "ns3/test.h"
 #include "ns3/simple-channel.h"
-#include "ns3/node.h"
 #include "ns3/config.h"
 #include "ns3/tcp-westwood.h"
-#include "ns3/tcp-header.h"
 #include "tcp-general-test.h"
 
 using namespace ns3;

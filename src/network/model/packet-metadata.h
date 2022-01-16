@@ -84,11 +84,10 @@ public:
    */
   struct Item 
   {
-    /// Type of data in the packet
-    enum ItemType {
-      PAYLOAD,  //!< Payload
-      HEADER,   //!< Header
-      TRAILER   //!< Trailer
+    enum {
+      PAYLOAD,
+      HEADER,
+      TRAILER
     } type; //!< metadata type
     /**
      * true: this is a fragmented header, trailer, or, payload.
@@ -106,12 +105,12 @@ public:
      */
     uint32_t currentSize;
     /**
-     * how many bytes were trimmed from the start of a fragment.
+     * how many bytes were trimed from the start of a fragment.
      * if isFragment is true, this field is zero.
      */
     uint32_t currentTrimedFromStart;
     /**
-     * how many bytes were trimmed from the end of a fragment.
+     * how many bytes were trimed from the end of a fragment.
      * if isFragment is true, this field is zero.
      */
     uint32_t currentTrimedFromEnd;
@@ -253,8 +252,6 @@ private:
 
   /**
    * \brief Initialize the item iterator to the buffer begin
-   * \param buffer buffer to initialize.
-   * \return the buffer iterator.
    */
   ItemIterator BeginItem (Buffer buffer) const;
 
@@ -463,7 +460,7 @@ private:
        is used to test whether two items are equal in the sense 
        that they represent the same header or trailer instance.
        That equality test is based on the typeUid and chunkUid
-       fields so, the likelihood that two header instances 
+       fields so, the likelyhood that two header instances 
        share the same chunkUid _and_ typeUid is very small 
        unless they are really representations of the same header
        instance.
@@ -504,7 +501,6 @@ public:
   };
 
   friend DataFreeList::~DataFreeList ();
-  /// Friend class
   friend class ItemIterator;
 
   PacketMetadata ();
@@ -600,7 +596,6 @@ public:
 
   /**
    * \brief Get the total size used by the metadata
-   * \return the metadata used size
    */
   uint32_t GetTotalSize (void) const;
 

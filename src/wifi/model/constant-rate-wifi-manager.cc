@@ -18,11 +18,10 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
+#include "constant-rate-wifi-manager.h"
+#include "wifi-utils.h"
 #include "ns3/string.h"
 #include "ns3/log.h"
-#include "constant-rate-wifi-manager.h"
-#include "wifi-tx-vector.h"
-#include "wifi-utils.h"
 
 #define Min(a,b) ((a < b) ? a : b)
 
@@ -118,19 +117,20 @@ WifiTxVector
 ConstantRateWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
 {
   NS_LOG_FUNCTION (this << st);
-  return WifiTxVector (m_dataMode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (m_dataMode, GetAddress (st)), ConvertGuardIntervalToNanoSeconds (m_dataMode, GetShortGuardInterval (st), NanoSeconds (GetGuardInterval (st))), GetNumberOfAntennas (), Min (GetMaxNumberOfTransmitStreams (), GetNumberOfSupportedStreams (st)), 0, GetChannelWidthForTransmission (m_dataMode, GetChannelWidth (st)), GetAggregation (st), false);
+  return WifiTxVector (m_dataMode, GetDefaultTxPowerLevel (), GetLongRetryCount (st), GetPreambleForTransmission (m_dataMode, GetAddress (st)), ConvertGuardIntervalToNanoSeconds (m_dataMode, GetShortGuardInterval (st), NanoSeconds (GetGuardInterval (st))), GetNumberOfAntennas (), Min (GetMaxNumberOfTransmitStreams (), GetNumberOfSupportedStreams (st)), 0, GetChannelWidth (st), GetAggregation (st), false);
 }
 
 WifiTxVector
 ConstantRateWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
 {
   NS_LOG_FUNCTION (this << st);
-  return WifiTxVector (m_ctlMode, GetDefaultTxPowerLevel (), GetPreambleForTransmission (m_ctlMode, GetAddress (st)), ConvertGuardIntervalToNanoSeconds (m_ctlMode, GetShortGuardInterval (st), NanoSeconds (GetGuardInterval (st))), 1, 1, 0, GetChannelWidthForTransmission (m_ctlMode, GetChannelWidth (st)), GetAggregation (st), false);
+  return WifiTxVector (m_ctlMode, GetDefaultTxPowerLevel (), GetShortRetryCount (st), GetPreambleForTransmission (m_ctlMode, GetAddress (st)), ConvertGuardIntervalToNanoSeconds (m_ctlMode, GetShortGuardInterval (st), NanoSeconds (GetGuardInterval (st))), 1, 1, 0, GetChannelWidth (st), GetAggregation (st), false);
 }
 
 bool
 ConstantRateWifiManager::IsLowLatency (void) const
 {
+  NS_LOG_FUNCTION (this);
   return true;
 }
 

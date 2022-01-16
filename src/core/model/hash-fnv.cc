@@ -159,7 +159,7 @@ extern "C" {
 /**
  * 32 bit FNV-0 hash type
  */
-typedef uint32_t Fnv32_t;  //PDB
+typedef u_int32_t Fnv32_t;
 
 
 /**
@@ -202,10 +202,10 @@ typedef uint32_t Fnv32_t;  //PDB
  * 64 bit FNV-0 hash
  */
 #if defined(HAVE_64BIT_LONG_LONG)
-typedef uint64_t Fnv64_t;  //PDB
+typedef u_int64_t Fnv64_t;
 #else /* HAVE_64BIT_LONG_LONG */
 typedef struct {
-    uint32_t w32[2]; /* w32[0] is low order, w32[1] is high order word */  //PDB
+    u_int32_t w32[2]; /* w32[0] is low order, w32[1] is high order word */
 } Fnv64_t;
 #endif /* HAVE_64BIT_LONG_LONG */
 
@@ -268,7 +268,9 @@ enum fnv_type {
 /*
  * external functions  //PDB converted to forward declarations
  */
-/** \copydoc fnv_32a_buf() */
+/**
+ * \copydoc fnv_32a_buf()
+ */
 /* extern */ Fnv32_t fnv_32_buf(void *buf, size_t len, Fnv32_t hval);
 /** \copydoc fnv_32a_str() */
 /* extern */ Fnv32_t fnv_32_str(char *str, Fnv32_t hval);
@@ -752,7 +754,7 @@ Fnv1a::Fnv1a ()
 }
 
 uint32_t
-Fnv1a::GetHash32  (const char * buffer, const std::size_t size)
+Fnv1a::GetHash32  (const char * buffer, const size_t size)
 {
   m_hash32 =
     Fnv1aImplementation::fnv_32a_buf ((void *)buffer, size, m_hash32);
@@ -760,7 +762,7 @@ Fnv1a::GetHash32  (const char * buffer, const std::size_t size)
 }
 
 uint64_t
-Fnv1a::GetHash64  (const char * buffer, const std::size_t size)
+Fnv1a::GetHash64  (const char * buffer, const size_t size)
 {
   m_hash64 =
     Fnv1aImplementation::fnv_64a_buf ((void *)buffer, size, m_hash64);

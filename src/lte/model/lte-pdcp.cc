@@ -30,15 +30,9 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LtePdcp");
 
-/// LtePdcpSpecificLteRlcSapUser class
 class LtePdcpSpecificLteRlcSapUser : public LteRlcSapUser
 {
 public:
-  /**
-   * Constructor
-   *
-   * \param pdcp PDCP
-   */
   LtePdcpSpecificLteRlcSapUser (LtePdcp* pdcp);
 
   // Interface provided to lower RLC entity (implemented from LteRlcSapUser)
@@ -46,7 +40,7 @@ public:
 
 private:
   LtePdcpSpecificLteRlcSapUser ();
-  LtePdcp* m_pdcp; ///< the PDCP
+  LtePdcp* m_pdcp;
 };
 
 LtePdcpSpecificLteRlcSapUser::LtePdcpSpecificLteRlcSapUser (LtePdcp* pdcp)
@@ -208,7 +202,7 @@ LtePdcp::DoTransmitPdcpSdu (Ptr<Packet> p)
 void
 LtePdcp::DoReceivePdu (Ptr<Packet> p)
 {
-  NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << p->GetSize ());
+    NS_LOG_FUNCTION (this << m_rnti << (uint32_t) m_lcid << p->GetSize ());
 
   // Receiver timestamp
   PdcpTag pdcpTag;

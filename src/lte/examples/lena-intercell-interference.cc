@@ -26,6 +26,7 @@
 #include "ns3/lte-module.h"
 #include "ns3/config-store.h"
 #include "ns3/radio-bearer-stats-calculator.h"
+#include "ns3/netanim-module.h"
 
 #include <iomanip>
 #include <string>
@@ -39,9 +40,9 @@ using namespace ns3;
  */
 int main (int argc, char *argv[])
 {
-  double enbDist = 100.0;
+  double enbDist = 1000.0;
   double radius = 50.0;
-  uint32_t numUes = 1;
+  uint32_t numUes = 5;
   double simTime = 1.0;
 
   CommandLine cmd;
@@ -54,13 +55,14 @@ int main (int argc, char *argv[])
   ConfigStore inputConfig;
   inputConfig.ConfigureDefaults ();
 
+
   // parse again so you can override default values from the command line
   cmd.Parse (argc, argv);
 
   // determine the string tag that identifies this simulation run
   // this tag is then appended to all filenames
 
-  UintegerValue runValue;
+  IntegerValue runValue;
   GlobalValue::GetValueByName ("RngRun", runValue);
 
   std::ostringstream tag;
@@ -69,9 +71,17 @@ int main (int argc, char *argv[])
        << "_numUes"  << std::setw (3) << std::setfill ('0')  << numUes
        << "_rngRun"  << std::setw (3) << std::setfill ('0')  << runValue.Get () ;
 
+  
+  
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   
   lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::FriisSpectrumPropagationLossModel"));
+
+  uint8_t DlBandwidth = 100;//25;
+  uint8_t UlBandwidth = 6;//25;
+  UintegerValue uintegerValue;
+  lteHelper->SetEnbDeviceAttribute ("DlBandwidth", UintegerValue (DlBandwidth));
+  lteHelper->SetEnbDeviceAttribute ("UlBandwidth", UintegerValue (UlBandwidth));
 
   // Create Nodes: eNodeB and UE
   NodeContainer enbNodes;
@@ -88,6 +98,7 @@ int main (int argc, char *argv[])
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   enbMobility.SetPositionAllocator (positionAlloc);
   enbMobility.Install (enbNodes);
+
 
   // Position of UEs attached to eNB 1
   MobilityHelper ue1mobility;
@@ -111,8 +122,17 @@ int main (int argc, char *argv[])
 
   // Create Devices and install them in the Nodes (eNB and UE)
   NetDeviceContainer enbDevs;
+  //NetDeviceContainer enbDev1;
+  //NetDeviceContainer enbDev2;
   NetDeviceContainer ueDevs1;
   NetDeviceContainer ueDevs2;
+  //enbNodes.Add (enbDev1);
+  //enbNodes.Add (enbDev2);
+
+  Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
+  //enbDevs.Add (lteHelper->InstallEnbDevice (enbDevs.Get (0)));
+  //Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (46.0));
+  //enbDevs.Add (lteHelper->InstallEnbDevice (enbDevs.Get (1)));
   enbDevs = lteHelper->InstallEnbDevice (enbNodes);
   ueDevs1 = lteHelper->InstallUeDevice (ueNodes1);
   ueDevs2 = lteHelper->InstallUeDevice (ueNodes2);
@@ -128,6 +148,7 @@ int main (int argc, char *argv[])
   lteHelper->ActivateDataRadioBearer (ueDevs2, bearer);
 
   Simulator::Stop (Seconds (simTime));
+  AnimationInterface anim ("animation_intercell_interference.xml");
 
   // Insert RLC Performance Calculator
   std::string dlOutFname = "DlRlcStats";
@@ -135,8 +156,22 @@ int main (int argc, char *argv[])
   std::string ulOutFname = "UlRlcStats";
   ulOutFname.append (tag.str ());
 
-  lteHelper->EnableMacTraces ();
-  lteHelper->EnableRlcTraces ();
+
+  Ptr<RadioEnvironmentMapHelper> remHelper = CreateObject<RadioEnvironmentMapHelper> ();
+  remHelper->SetAttribute ("ChannelPath", StringValue ("/ChannelList/0"));
+  remHelper->SetAttribute ("OutputFile", StringValue ("lena-intercell-interference.rem"));
+  remHelper->SetAttribute ("XMin", DoubleValue (-600.0));
+  remHelper->SetAttribute ("XMax", DoubleValue (1000.0));
+  remHelper->SetAttribute ("XRes", UintegerValue (100));
+  remHelper->SetAttribute ("YMin", DoubleValue (-300.0));
+  remHelper->SetAttribute ("YMax", DoubleValue (300.0));
+  remHelper->SetAttribute ("YRes", UintegerValue (75));
+  remHelper->SetAttribute ("Z", DoubleValue (0.0));
+  remHelper->Install ();
+
+  //lteHelper->EnableMacTraces ();
+  //lteHelper->EnableRlcTraces ();
+  lteHelper->EnableTraces ();
 
   Simulator::Run ();
   Simulator::Destroy ();

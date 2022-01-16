@@ -27,9 +27,7 @@
 using namespace ns3;
 
 /**
- * \ingroup dot11s-test
- * \ingroup tests
- *
+ * \ingroup dot11s
  * \brief Peering Management & HWM Protocol regression test
  * Initiate scenario with 2 stations. Procedure of opening peer link
  * is the following:
@@ -74,7 +72,6 @@ public:
   virtual ~HwmpSimplestRegressionTest();
 
   virtual void DoRun ();
-  /// Check results function
   void CheckResults ();
 
 private:
@@ -82,15 +79,11 @@ private:
   NodeContainer * m_nodes;
   /// Simulation time
   Time m_time;
-  Ipv4InterfaceContainer m_interfaces; ///< interfaces
+  Ipv4InterfaceContainer m_interfaces;
 
-  /// Create nodes function
   void CreateNodes ();
-  /// Create devices function
   void CreateDevices ();
-  /// Install application function
   void InstallApplications ();
-  /// Reset position
   void ResetPosition ();
 
   /// Server-side socket
@@ -98,7 +91,7 @@ private:
   /// Client-side socket
   Ptr<Socket> m_clientSocket;
 
-  /// sent packets counter
+  // sent packets counter
   uint32_t m_sentPktsCounter;
 
   /**

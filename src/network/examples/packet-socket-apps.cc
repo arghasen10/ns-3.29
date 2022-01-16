@@ -27,7 +27,7 @@
 //
 // - Packets flows from n0 to n1
 //
-// This example shows how to use the PacketSocketServer and PacketSocketClient
+// This example shows how to use the SimpleServer and SimpleClient
 // to send non-IP packets over a SimpleNetDevice
 
 #include "ns3/core-module.h"
