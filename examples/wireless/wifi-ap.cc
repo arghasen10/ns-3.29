@@ -18,19 +18,12 @@
  * Author: Mathieu Lacage <mathieu.lacage@sophia.inria.fr>
  */
 
-#include "ns3/command-line.h"
-#include "ns3/config.h"
-#include "ns3/boolean.h"
-#include "ns3/string.h"
-#include "ns3/yans-wifi-helper.h"
-#include "ns3/ssid.h"
-#include "ns3/mobility-helper.h"
-#include "ns3/on-off-helper.h"
-#include "ns3/yans-wifi-channel.h"
-#include "ns3/mobility-model.h"
-#include "ns3/packet-socket-helper.h"
-#include "ns3/packet-socket-address.h"
-#include "ns3/athstats-helper.h"
+
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/wifi-module.h"
 
 using namespace ns3;
 
@@ -53,7 +46,7 @@ DevRxTrace (std::string context, Ptr<const Packet> p)
     }
 }
 void
-PhyRxOkTrace (std::string context, Ptr<const Packet> packet, double snr, WifiMode mode, WifiPreamble preamble)
+PhyRxOkTrace (std::string context, Ptr<const Packet> packet, double snr, WifiMode mode, enum WifiPreamble preamble)
 {
   if (g_verbose)
     {
@@ -77,7 +70,7 @@ PhyTxTrace (std::string context, Ptr<const Packet> packet, WifiMode mode, WifiPr
     }
 }
 void
-PhyStateTrace (std::string context, Time start, Time duration, WifiPhyState state)
+PhyStateTrace (std::string context, Time start, Time duration, enum WifiPhy::State state)
 {
   if (g_verbose)
     {
@@ -110,6 +103,10 @@ AdvancePosition (Ptr<Node> node)
     }
   SetPosition (node, pos);
 
+  if (g_verbose)
+    {
+      //std::cout << "x="<<pos.x << std::endl;
+    }
   Simulator::Schedule (Seconds (1.0), &AdvancePosition, node);
 }
 
@@ -117,9 +114,15 @@ int main (int argc, char *argv[])
 {
   CommandLine cmd;
   cmd.AddValue ("verbose", "Print trace information if true", g_verbose);
+
   cmd.Parse (argc, argv);
 
   Packet::EnablePrinting ();
+
+  // enable rts cts all the time.
+  Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("0"));
+  // disable fragmentation
+  Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("2200"));
 
   WifiHelper wifi;
   MobilityHelper mobility;
@@ -143,7 +146,6 @@ int main (int argc, char *argv[])
   wifi.SetRemoteStationManager ("ns3::ArfWifiManager");
   // setup stas.
   wifiMac.SetType ("ns3::StaWifiMac",
-                   "ActiveProbing", BooleanValue (true),
                    "Ssid", SsidValue (ssid));
   staDevs = wifi.Install (wifiPhy, wifiMac, stas);
   // setup ap.

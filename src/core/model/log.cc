@@ -23,7 +23,6 @@
 #include <utility>
 #include <iostream>
 #include "assert.h"
-#include <stdexcept>
 #include "ns3/core-config.h"
 #include "fatal-error.h"
 
@@ -38,7 +37,7 @@
 /**
  * \file
  * \ingroup logging
- * ns3::LogComponent and related implementations.
+ * Debug message logging implementation.
  */
 
 
@@ -129,23 +128,6 @@ LogComponent::LogComponent (const std::string & name,
         }
     }
   components->insert (std::make_pair (name, this));
-}
-
-LogComponent &
-GetLogComponent (const std::string name)
-{
-  LogComponent::ComponentList *components = LogComponent::GetComponentList ();
-  LogComponent* ret;
-
-  try
-    {
-      ret = components->at (name);
-    }
-  catch (std::out_of_range&)
-    {
-      NS_FATAL_ERROR ("Log component \"" << name << "\" does not exist.");
-    }
-  return *ret;
 }
 
 void
@@ -339,7 +321,7 @@ LogComponent::GetLevelLabel(const enum LogLevel level)
     }
   else if (level == LOG_WARN)
     {
-      // whitespace left at the end for alignment
+      // whitespace left at the end for aligment
       return "WARN ";
     }
   else if (level == LOG_DEBUG)
@@ -348,7 +330,7 @@ LogComponent::GetLevelLabel(const enum LogLevel level)
     }
   else if (level == LOG_INFO)
     {
-      // whitespace left at the end for alignment
+      // whitespace left at the end for aligment
       return "INFO ";
     }
   else if (level == LOG_FUNCTION)
@@ -677,38 +659,6 @@ ParameterLogger&
 ParameterLogger::operator<< <const char *>(const char * param)
 {
   (*this) << std::string (param);
-  return *this;
-}
-
-template<>
-ParameterLogger&
-ParameterLogger::operator<< <int8_t>(const int8_t param)
-{
-  if (m_first)
-  {
-    m_os << static_cast<int16_t> (param);
-    m_first = false;
-  }
-  else
-  {
-    m_os << ", " << static_cast<int16_t> (param);
-  }
-  return *this;
-}
-
-template<>
-ParameterLogger&
-ParameterLogger::operator<< <uint8_t>(const uint8_t param)
-{
-  if (m_first)
-  {
-    m_os << static_cast<uint16_t> (param);
-    m_first = false;
-  }
-  else
-  {
-    m_os << ", " << static_cast<uint16_t> (param);
-  }
   return *this;
 }
 

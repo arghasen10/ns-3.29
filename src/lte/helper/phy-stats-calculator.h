@@ -150,7 +150,6 @@ public:
    * \param rnti 
    * \param rsrp 
    * \param sinr 
-   * \param componentCarrierId
    */
   static void ReportCurrentCellRsrpSinrCallback (Ptr<PhyStatsCalculator> phyStats,
                                           std::string path, uint16_t cellId, uint16_t rnti,

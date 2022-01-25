@@ -22,7 +22,6 @@
 #include "ns3/log.h"
 #include "ns3/simulator.h"
 #include "ns3/object-factory.h"
-#include "ns3/queue.h"
 #include "ns3/simple-net-device.h"
 #include "ns3/simple-channel.h"
 #include "ns3/config.h"
@@ -41,7 +40,7 @@ NS_LOG_COMPONENT_DEFINE ("SimpleNetDeviceHelper");
 
 SimpleNetDeviceHelper::SimpleNetDeviceHelper ()
 {
-  m_queueFactory.SetTypeId ("ns3::DropTailQueue<Packet>");
+  m_queueFactory.SetTypeId ("ns3::DropTailQueue");
   m_deviceFactory.SetTypeId ("ns3::SimpleNetDevice");
   m_channelFactory.SetTypeId ("ns3::SimpleChannel");
   m_pointToPointMode = false;
@@ -54,8 +53,6 @@ SimpleNetDeviceHelper::SetQueue (std::string type,
                                  std::string n3, const AttributeValue &v3,
                                  std::string n4, const AttributeValue &v4)
 {
-  QueueBase::AppendItemTypeIfNotPresent (type, "Packet");
-
   m_queueFactory.SetTypeId (type);
   m_queueFactory.Set (n1, v1);
   m_queueFactory.Set (n2, v2);
@@ -137,7 +134,7 @@ SimpleNetDeviceHelper::InstallPriv (Ptr<Node> node, Ptr<SimpleChannel> channel) 
   device->SetAddress (Mac48Address::Allocate ());
   node->AddDevice (device);
   device->SetChannel (channel);
-  Ptr<Queue<Packet> > queue = m_queueFactory.Create<Queue<Packet> > ();
+  Ptr<Queue> queue = m_queueFactory.Create<Queue> ();
   device->SetQueue (queue);
   NS_ASSERT_MSG (!m_pointToPointMode || (channel->GetNDevices () <= 2), "Device set to PointToPoint and more than 2 devices on the channel.");
   return device;

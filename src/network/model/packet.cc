@@ -264,19 +264,6 @@ Packet::AddHeader (const Header &header)
   m_metadata.AddHeader (header, size);
 }
 uint32_t
-Packet::RemoveHeader (Header &header, uint32_t size)
-{
-  Buffer::Iterator end;
-  end = m_buffer.Begin ();
-  end.Next (size);
-  uint32_t deserialized = header.Deserialize (m_buffer.Begin (), end);
-  NS_LOG_FUNCTION (this << header.GetInstanceTypeId ().GetName () << deserialized);
-  m_buffer.RemoveAtStart (deserialized);
-  m_byteTagList.Adjust (-deserialized);
-  m_metadata.RemoveHeader (header, deserialized);
-  return deserialized;
-}
-uint32_t
 Packet::RemoveHeader (Header &header)
 {
   uint32_t deserialized = header.Deserialize (m_buffer.Begin ());
@@ -290,16 +277,6 @@ uint32_t
 Packet::PeekHeader (Header &header) const
 {
   uint32_t deserialized = header.Deserialize (m_buffer.Begin ());
-  NS_LOG_FUNCTION (this << header.GetInstanceTypeId ().GetName () << deserialized);
-  return deserialized;
-}
-uint32_t
-Packet::PeekHeader (Header &header, uint32_t size) const
-{
-  Buffer::Iterator end;
-  end = m_buffer.Begin ();
-  end.Next (size);
-  uint32_t deserialized = header.Deserialize (m_buffer.Begin (), end);
   NS_LOG_FUNCTION (this << header.GetInstanceTypeId ().GetName () << deserialized);
   return deserialized;
 }
@@ -468,22 +445,7 @@ Packet::Print (std::ostream &os) const
                 NS_ASSERT (instance != 0);
                 Chunk *chunk = dynamic_cast<Chunk *> (instance);
                 NS_ASSERT (chunk != 0);
-                if (item.type == PacketMetadata::Item::HEADER)
-                  {
-                    Buffer::Iterator end = item.current;
-                    end.Next (item.currentSize); // move from start 
-                    chunk->Deserialize (item.current, end);
-                  }
-                else if (item.type == PacketMetadata::Item::TRAILER)
-                  {
-                    Buffer::Iterator start = item.current;
-                    start.Prev (item.currentSize); // move from end
-                    chunk->Deserialize (start, item.current);
-                  }
-                else
-                  {
-                    chunk->Deserialize (item.current);
-                  }    
+                chunk->Deserialize (item.current);
                 chunk->Print (os);
                 delete chunk;
               }
@@ -691,7 +653,8 @@ Packet::Serialize (uint8_t* buffer, uint32_t maxSize) const
       size += metaSize;
 
       // serialize the metadata
-      uint32_t serialized = m_metadata.Serialize (reinterpret_cast<uint8_t *> (p), metaSize);
+      uint32_t serialized = 
+        m_metadata.Serialize (reinterpret_cast<uint8_t *> (p), metaSize); 
       if (serialized)
         {
           // increment p by metaSize bytes
@@ -716,10 +679,18 @@ Packet::Serialize (uint8_t* buffer, uint32_t maxSize) const
       // buffer. this includes 4-bytes for total 
       // length itself
       *p++ = bufSize + 4;
+      size += bufSize;
 
       // serialize the buffer
-      uint32_t serialized = m_buffer.Serialize (reinterpret_cast<uint8_t *> (p), bufSize);
-      if (!serialized)
+      uint32_t serialized = 
+        m_buffer.Serialize (reinterpret_cast<uint8_t *> (p), bufSize);
+      if (serialized)
+        {
+          // increment p by bufSize bytes
+          // ensuring 4-byte boundary
+          p += ((bufSize+3) & (~3)) / 4;
+        }
+      else 
         {
           return 0;
         }

@@ -51,7 +51,7 @@ public:
   virtual void SetLteFfrRrcSapUser (LteFfrRrcSapUser* s);
   virtual LteFfrRrcSapProvider* GetLteFfrRrcSapProvider ();
 
-  /// let the forwarder class access the protected and private members
+  // let the forwarder class access the protected and private members
   friend class MemberLteFfrSapProvider<LteFfrDistributedAlgorithm>;
   /// let the forwarder class access the protected and private members
   friend class MemberLteFfrRrcSapProvider<LteFfrDistributedAlgorithm>;
@@ -112,7 +112,6 @@ private:
    */
   void UpdateNeighbourMeasurements (uint16_t rnti, uint16_t cellId, uint8_t rsrp, uint8_t rsrq);
 
-  /// Calculate function
   void Calculate ();
   /**
    * Send load information function
@@ -174,19 +173,19 @@ private:
     uint8_t m_rsrq; ///< RSRQ
   };
 
-  ///               cellId
+  //               cellId
   typedef std::map<uint16_t, Ptr<UeMeasure> > MeasurementRow_t;
-  ///               rnti
+  //               rnti
   typedef std::map<uint16_t, MeasurementRow_t> MeasurementTable_t;
-  MeasurementTable_t m_ueMeasures; ///< UE measures
+  MeasurementTable_t m_ueMeasures;
 
-  std::vector<uint16_t> m_neigborCell; ///< neighbor cell
+  std::vector<uint16_t> m_neigborCell;
 
-  uint8_t m_rsrpDifferenceThreshold; ///< RSRP difference threshold
+  uint8_t m_rsrpDifferenceThreshold;
 
-  std::map<uint16_t, uint32_t> m_cellWeightMap; ///< cell weight map
+  std::map<uint16_t, uint32_t> m_cellWeightMap;
 
-  std::map<uint16_t, std::vector <bool> > m_rntp; ///< RNTP
+  std::map<uint16_t, std::vector <bool> > m_rntp;
 
 }; // end of class LteFfrDistributedAlgorithm
 

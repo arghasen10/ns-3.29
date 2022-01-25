@@ -21,9 +21,9 @@
  */
 
 #include "ns3/log.h"
+#include "ns3/pointer.h"
 #include "ns3/object-factory.h"
-#include "ns3/queue.h"
-#include "ns3/net-device-queue-interface.h"
+#include "ns3/drop-tail-queue.h"
 #include "ns3/socket.h"
 #include "pfifo-fast-queue-disc.h"
 
@@ -39,18 +39,16 @@ TypeId PfifoFastQueueDisc::GetTypeId (void)
     .SetParent<QueueDisc> ()
     .SetGroupName ("TrafficControl")
     .AddConstructor<PfifoFastQueueDisc> ()
-    .AddAttribute ("MaxSize",
+    .AddAttribute ("Limit",
                    "The maximum number of packets accepted by this queue disc.",
-                   QueueSizeValue (QueueSize ("1000p")),
-                   MakeQueueSizeAccessor (&QueueDisc::SetMaxSize,
-                                          &QueueDisc::GetMaxSize),
-                   MakeQueueSizeChecker ())
+                   UintegerValue (1000),
+                   MakeUintegerAccessor (&PfifoFastQueueDisc::m_limit),
+                   MakeUintegerChecker<uint32_t> ())
   ;
   return tid;
 }
 
 PfifoFastQueueDisc::PfifoFastQueueDisc ()
-  : QueueDisc (QueueDiscSizePolicy::MULTIPLE_QUEUES, QueueSizeUnit::PACKETS)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -67,10 +65,10 @@ PfifoFastQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
   NS_LOG_FUNCTION (this << item);
 
-  if (GetCurrentSize () >= GetMaxSize ())
+  if (GetNPackets () > m_limit)
     {
       NS_LOG_LOGIC ("Queue disc limit exceeded -- dropping packet");
-      DropBeforeEnqueue (item, LIMIT_EXCEEDED_DROP);
+      Drop (item);
       return false;
     }
 
@@ -85,13 +83,8 @@ PfifoFastQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 
   bool retval = GetInternalQueue (band)->Enqueue (item);
 
-  // If Queue::Enqueue fails, QueueDisc::DropBeforeEnqueue is called by the
-  // internal queue because QueueDisc::AddInternalQueue sets the trace callback
-
-  if (!retval)
-    {
-      NS_LOG_WARN ("Packet enqueue failed. Check the size of the internal queues");
-    }
+  // If Queue::Enqueue fails, QueueDisc::Drop is called by the internal queue
+  // because QueueDisc::AddInternalQueue sets the drop callback
 
   NS_LOG_LOGIC ("Number packets band " << band << ": " << GetInternalQueue (band)->GetNPackets ());
 
@@ -107,7 +100,7 @@ PfifoFastQueueDisc::DoDequeue (void)
 
   for (uint32_t i = 0; i < GetNInternalQueues (); i++)
     {
-      if ((item = GetInternalQueue (i)->Dequeue ()) != 0)
+      if ((item = StaticCast<QueueDiscItem> (GetInternalQueue (i)->Dequeue ())) != 0)
         {
           NS_LOG_LOGIC ("Popped from band " << i << ": " << item);
           NS_LOG_LOGIC ("Number packets band " << i << ": " << GetInternalQueue (i)->GetNPackets ());
@@ -120,7 +113,7 @@ PfifoFastQueueDisc::DoDequeue (void)
 }
 
 Ptr<const QueueDiscItem>
-PfifoFastQueueDisc::DoPeek (void)
+PfifoFastQueueDisc::DoPeek (void) const
 {
   NS_LOG_FUNCTION (this);
 
@@ -128,7 +121,7 @@ PfifoFastQueueDisc::DoPeek (void)
 
   for (uint32_t i = 0; i < GetNInternalQueues (); i++)
     {
-      if ((item = GetInternalQueue (i)->Peek ()) != 0)
+      if ((item = StaticCast<const QueueDiscItem> (GetInternalQueue (i)->Peek ())) != 0)
         {
           NS_LOG_LOGIC ("Peeked from band " << i << ": " << item);
           NS_LOG_LOGIC ("Number packets band " << i << ": " << GetInternalQueue (i)->GetNPackets ());
@@ -158,13 +151,14 @@ PfifoFastQueueDisc::CheckConfig (void)
 
   if (GetNInternalQueues () == 0)
     {
-      // create 3 DropTail queues with GetLimit() packets each
+      // create 3 DropTail queues with m_limit packets each
       ObjectFactory factory;
-      factory.SetTypeId ("ns3::DropTailQueue<QueueDiscItem>");
-      factory.Set ("MaxSize", QueueSizeValue (GetMaxSize ()));
-      AddInternalQueue (factory.Create<InternalQueue> ());
-      AddInternalQueue (factory.Create<InternalQueue> ());
-      AddInternalQueue (factory.Create<InternalQueue> ());
+      factory.SetTypeId ("ns3::DropTailQueue");
+      factory.Set ("Mode", EnumValue (Queue::QUEUE_MODE_PACKETS));
+      factory.Set ("MaxPackets", UintegerValue (m_limit));
+      AddInternalQueue (factory.Create<Queue> ());
+      AddInternalQueue (factory.Create<Queue> ());
+      AddInternalQueue (factory.Create<Queue> ());
     }
 
   if (GetNInternalQueues () != 3)
@@ -173,9 +167,9 @@ PfifoFastQueueDisc::CheckConfig (void)
       return false;
     }
 
-  if (GetInternalQueue (0)-> GetMaxSize ().GetUnit () != QueueSizeUnit::PACKETS ||
-      GetInternalQueue (1)-> GetMaxSize ().GetUnit () != QueueSizeUnit::PACKETS ||
-      GetInternalQueue (2)-> GetMaxSize ().GetUnit () != QueueSizeUnit::PACKETS)
+  if (GetInternalQueue (0)-> GetMode () != Queue::QUEUE_MODE_PACKETS ||
+      GetInternalQueue (1)-> GetMode () != Queue::QUEUE_MODE_PACKETS ||
+      GetInternalQueue (2)-> GetMode () != Queue::QUEUE_MODE_PACKETS)
     {
       NS_LOG_ERROR ("PfifoFastQueueDisc needs 3 internal queues operating in packet mode");
       return false;
@@ -183,7 +177,7 @@ PfifoFastQueueDisc::CheckConfig (void)
 
   for (uint8_t i = 0; i < 2; i++)
     {
-      if (GetInternalQueue (i)->GetMaxSize () < GetMaxSize ())
+      if (GetInternalQueue (i)->GetMaxPackets () < m_limit)
         {
           NS_LOG_ERROR ("The capacity of some internal queue(s) is less than the queue disc capacity");
           return false;

@@ -21,15 +21,13 @@
 #ifndef ATHSTATS_HELPER_H
 #define ATHSTATS_HELPER_H
 
-#include "ns3/wifi-phy-state.h"
+#include "ns3/node-container.h"
+#include "ns3/net-device-container.h"
+#include "ns3/wifi-phy.h"
 
 namespace ns3 {
 
 class NetDevice;
-class NodeContainer;
-class NetDeviceContainer;
-class Packet;
-class Mac48Address;
 
 /**
  * @brief create AthstatsWifiTraceSink instances and connect them to wifi devices
@@ -40,34 +38,13 @@ class AthstatsHelper
 {
 public:
   AthstatsHelper ();
-  /**
-   * Enable athstats
-   * \param filename the file name
-   * \param nodeid the node ID
-   * \param deviceid the device ID
-   */
   void EnableAthstats (std::string filename,  uint32_t nodeid, uint32_t deviceid);
-  /**
-   * Enable athstats
-   * \param filename the file name
-   * \param nd the device
-   */
   void EnableAthstats (std::string filename, Ptr<NetDevice> nd);
-  /**
-   * Enable athstats
-   * \param filename the file name
-   * \param d the collection of devices
-   */
   void EnableAthstats (std::string filename, NetDeviceContainer d);
-  /**
-   * Enable athstats
-   * \param filename the file name
-   * \param n the collection of nodes
-   */
   void EnableAthstats (std::string filename, NodeContainer n);
 
 private:
-  Time m_interval; ///< interval
+  Time m_interval;
 };
 
 
@@ -76,7 +53,7 @@ private:
  *
  * The AthstatsWifiTraceSink class is a trace sink to be connected to several of the traces
  * available within a wifi device. The purpose of AthstatsWifiTraceSink is to
- * mimic the behavior of the athstats tool distributed with the madwifi
+ * mimic the behavior of the athstats tool distributed wih the madwifi
  * driver. In particular, the reproduced behavior is that obtained
  * when executing athstats without parameters: a report written in
  * text format is produced every fixed interval, based on the events
@@ -95,10 +72,6 @@ private:
 class AthstatsWifiTraceSink  : public Object
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
   AthstatsWifiTraceSink ();
   virtual ~AthstatsWifiTraceSink ();
@@ -165,7 +138,7 @@ public:
    * @param mode
    * @param preamble
    */
-  void PhyRxOkTrace (std::string context, Ptr<const Packet> packet, double snr, WifiMode mode, WifiPreamble preamble);
+  void PhyRxOkTrace (std::string context, Ptr<const Packet> packet, double snr, WifiMode mode, enum WifiPreamble preamble);
 
   /**
    * Function to be called when a frame reception by the PHY
@@ -199,7 +172,7 @@ public:
    * @param duration
    * @param state
    */
-  void PhyStateTrace (std::string context, Time start, Time duration, WifiPhyState state);
+  void PhyStateTrace (std::string context, Time start, Time duration, enum WifiPhy::State state);
 
   /**
    * Open a file for output
@@ -210,23 +183,21 @@ public:
 
 
 private:
-  /// Write status function
   void WriteStats ();
-  /// Reset counters function
   void ResetCounters ();
 
-  uint32_t m_txCount; ///< transmit count
-  uint32_t m_rxCount; ///< receive count
-  uint32_t m_shortRetryCount; ///< short retry count
-  uint32_t m_longRetryCount; ///< long retry count
-  uint32_t m_exceededRetryCount; ///< exceeded retry count
-  uint32_t m_phyRxOkCount; ///< phy receive ok count
-  uint32_t m_phyRxErrorCount; ///< phy receive error count
-  uint32_t m_phyTxCount; ///< phy transmit count
+  uint32_t m_txCount;
+  uint32_t m_rxCount;
+  uint32_t m_shortRetryCount;
+  uint32_t m_longRetryCount;
+  uint32_t m_exceededRetryCount;
+  uint32_t m_phyRxOkCount;
+  uint32_t m_phyRxErrorCount;
+  uint32_t m_phyTxCount;
 
-  std::ofstream *m_writer; ///< output stream
+  std::ofstream *m_writer;
 
-  Time m_interval; ///< interval
+  Time m_interval;
 
 }; //class AthstatsWifiTraceSink
 

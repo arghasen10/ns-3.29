@@ -309,5 +309,71 @@ DlHarqFeedbackLteControlMessage::GetDlHarqFeedback (void)
 }
 
 
+// ---------------------------------------------------------------------------
+// Added to serve NB-IoT standard explained in the 3GPP Release 13
+
+
+MibNbLteControlMessage::MibNbLteControlMessage (void)
+{
+	SetMessageType (LteControlMessage::MIB_NB);
+}
+
+void
+MibNbLteControlMessage::SetMibNb (NbLteRrcSap::MasterInformationBlockNb  mibNb)
+{
+  m_mibNb = mibNb;
+}
+
+NbLteRrcSap::MasterInformationBlockNb
+MibNbLteControlMessage::GetMibNb () const
+{
+  return m_mibNb;
+}
+
+
+//---------------------------------------------------------------------------
+// Added to serve NB-IoT standard explained in the 3GPP Release 13
+
+Sib1NbLteControlMessage::Sib1NbLteControlMessage(void)
+{
+  SetMessageType (LteControlMessage::SIB1_NB);
+}
+
+void
+Sib1NbLteControlMessage::SetSib1Nb(NbLteRrcSap::SystemInformationBlockType1Nb sib1Nb)
+{
+  m_sib1Nb=sib1Nb;
+}
+
+NbLteRrcSap::SystemInformationBlockType1Nb
+Sib1NbLteControlMessage::GetSib1Nb()const
+{
+  return m_sib1Nb;
+}
+
+
+
+// Paging
+
+PagingLteControlMessage::PagingLteControlMessage(void)
+{
+  SetMessageType (LteControlMessage::PAGING);
+}
+
+void
+PagingLteControlMessage::SetPaging(LteRrcSap::PagingInformation paging)
+{
+  m_paging = paging;
+}
+
+LteRrcSap::PagingInformation
+PagingLteControlMessage::GetPaging()const
+{
+  return m_paging;
+}
+
+
+//---------------------------------------------------------------------------
+
 } // namespace ns3
 

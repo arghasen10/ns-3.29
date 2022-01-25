@@ -234,15 +234,21 @@ private:
    */
   void UpdateConfig ();
 
-  Ptr<LteEnbRrc> m_rrc; ///< the RRC
+  Ptr<LteEnbMac> m_mac; /**< DEPRECATED - It is maintained for backward compatibility after adding CA feature*/
 
-  Ptr<LteHandoverAlgorithm> m_handoverAlgorithm; ///< the handover algorithm
- 
-  Ptr<LteAnr> m_anr; ///< ANR
+  Ptr<LteEnbPhy> m_phy; /**< DEPRECATED - It is maintained for backward compatibility after adding CA feature*/
+
+  Ptr<LteEnbRrc> m_rrc;
+
+  Ptr<FfMacScheduler> m_scheduler; /**< DEPRECATED - It is maintained for backward compatibility after adding CA feature*/
+
+  Ptr<LteHandoverAlgorithm> m_handoverAlgorithm;
+
+  Ptr<LteAnr> m_anr;
 
   Ptr<LteFfrAlgorithm> m_ffrAlgorithm; /**< DEPRECATED - It is maintained for backward compatibility after adding CA feature*/
 
-  uint16_t m_cellId; /**< Cell Identifier. Part of the CGI, see TS 29.274, section 8.21.1  */
+  uint16_t m_cellId; /**< Cell Identifer. Part of the CGI, see TS 29.274, section 8.21.1  */
 
   uint8_t m_dlBandwidth; /**<DEPRECATE - It is maintained for backward compatibility after adding CA feature- downlink bandwidth in RBs */
   uint8_t m_ulBandwidth; /**<DEPRECATE - It is maintained for backward compatibility after adding CA feature- uplink bandwidth in RBs */

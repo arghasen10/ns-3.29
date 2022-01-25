@@ -27,12 +27,11 @@
 #include "ns3/global-value.h"
 #include "ns3/ptr.h"
 
-#include <chrono>  // seconds, milliseconds
-#include <thread>  // sleep_for
+#include <unistd.h>
+#include <sys/time.h>
 
 /**
  * \file
- * \ingroup core-examples
  * \ingroup scheduler
  * An example of scheduling events in a background thread.
  *
@@ -42,11 +41,8 @@
 
 using namespace ns3;
 
-
 NS_LOG_COMPONENT_DEFINE ("TestSync");
 
-namespace {
-  
 /** Check that the event functions run in the intended order. */
 bool gFirstRun = false;
 
@@ -96,15 +92,14 @@ void
 FakeNetDevice::Doit3 (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
-  std::this_thread::sleep_for (std::chrono::seconds(1));
-
+  sleep (1);
   for (uint32_t i = 0; i < 10000; ++i)
     {
       //
       // Exercise the realtime relative now path
       //
       Simulator::ScheduleWithContext(Simulator::NO_CONTEXT, Seconds(0.0), MakeEvent (&inserted_function));
-      std::this_thread::sleep_for (std::chrono::milliseconds(1));
+      usleep (1000);
     }
 }
 
@@ -147,9 +142,6 @@ test (void)
   st3->Join ();
   Simulator::Destroy ();
 }
-
-}  // unnamed namespace
-
 
 int
 main (int argc, char *argv[])

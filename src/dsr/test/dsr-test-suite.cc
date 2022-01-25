@@ -53,19 +53,7 @@ using namespace ns3;
 using namespace dsr;
 
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr
- * \defgroup dsr-test DSR routing module tests
- */
-
-
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrFsHeaderTest
- * \brief Unit test for DSR Fixed Size Header
- */
+// / Unit test for DSR Fixed Size Header
 class DsrFsHeaderTest : public TestCase
 {
 public:
@@ -97,13 +85,7 @@ DsrFsHeaderTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (*(data + 8), rreqHeader.GetType (), "expect the rreqHeader after fixed size header");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrRreqHeaderTest
- * \brief Unit test for RREQ
- */
+// / Unit test for RREQ
 class DsrRreqHeaderTest : public TestCase
 {
 public:
@@ -148,13 +130,7 @@ DsrRreqHeaderTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (bytes, 20, "Total RREP is 20 bytes long");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrRrepHeaderTest
- * \brief Unit test for RREP
- */
+// / Unit test for RREP
 class DsrRrepHeaderTest : public TestCase
 {
 public:
@@ -195,13 +171,7 @@ DsrRrepHeaderTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (bytes, 16, "Total RREP is 16 bytes long");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrSRHeaderTest
- * \brief Unit test for Source Route
- */
+// / Unit test for Source Route
 class DsrSRHeaderTest : public TestCase
 {
 public:
@@ -246,13 +216,7 @@ DsrSRHeaderTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (bytes, 16, "Total RREP is 16 bytes long");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrRerrHeaderTest
- * \brief Unit test for RERR
- */
+// / Unit test for RERR
 class DsrRerrHeaderTest : public TestCase
 {
 public:
@@ -291,13 +255,7 @@ DsrRerrHeaderTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (bytes, 20, "Total RREP is 20 bytes long");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrAckReqHeaderTest
- * \brief Unit test for ACK-REQ
- */
+// / Unit test for ACK-REQ
 class DsrAckReqHeaderTest : public TestCase
 {
 public:
@@ -333,13 +291,7 @@ DsrAckReqHeaderTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (bytes, 4, "Total RREP is 4 bytes long");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrAckHeaderTest
- * \brief Unit test for ACK
- */
+// / Unit test for ACK
 class DsrAckHeaderTest : public TestCase
 {
 public:
@@ -379,13 +331,7 @@ DsrAckHeaderTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (bytes, 12, "Total RREP is 12 bytes long");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrCacheEntryTest
- * \brief Unit test for DSR route cache entry
- */
+// / Unit test for DSR route cache entry
 class DsrCacheEntryTest : public TestCase
 {
 public:
@@ -438,13 +384,7 @@ DsrCacheEntryTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (rcache->DeleteRoute (Ipv4Address ("1.1.1.1")), false, "trivial");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrSendBuffTest
- * \brief Unit test for Send Buffer
- */
+// / Unit test for Send Buffer
 class DsrSendBuffTest : public TestCase
 {
 public:
@@ -452,12 +392,10 @@ public:
   ~DsrSendBuffTest ();
   virtual void
   DoRun (void);
-  /// Check size limit function
   void CheckSizeLimit ();
-  /// Check timeout function
   void CheckTimeout ();
 
-  dsr::DsrSendBuffer q; ///< send buffer
+  dsr::DsrSendBuffer q;
 };
 DsrSendBuffTest::DsrSendBuffTest ()
   : TestCase ("DSR SendBuff"),
@@ -540,13 +478,7 @@ DsrSendBuffTest::CheckTimeout ()
   NS_TEST_EXPECT_MSG_EQ (q.GetSize (), 0, "Must be empty now");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrRreqTableTest
- * \brief Unit test for DSR routing table entry
- */
+// / Unit test for DSR routing table entry
 class DsrRreqTableTest : public TestCase
 {
 public:
@@ -571,13 +503,6 @@ DsrRreqTableTest::DoRun ()
   NS_TEST_EXPECT_MSG_EQ (rt.m_reqNo, 2, "trivial");
 }
 // -----------------------------------------------------------------------------
-/**
- * \ingroup dsr-test
- * \ingroup tests
- *
- * \class DsrTestSuite
- * \brief DSR test suite
- */
 class DsrTestSuite : public TestSuite
 {
 public:

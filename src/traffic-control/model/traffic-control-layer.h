@@ -23,15 +23,14 @@
 #include "ns3/address.h"
 #include "ns3/net-device.h"
 #include "ns3/node.h"
-#include "ns3/queue-item.h"
+#include "queue-disc.h"
 #include <map>
 #include <vector>
 
 namespace ns3 {
 
 class Packet;
-class QueueDisc;
-class NetDeviceQueueInterface;
+class QueueDiscItem;
 
 /**
  * \defgroup traffic-control
@@ -106,8 +105,6 @@ public:
    */
   TrafficControlLayer ();
 
-  virtual ~TrafficControlLayer ();
-
   /**
    * \brief Register an IN handler
    *
@@ -180,7 +177,7 @@ public:
    * \param device network device
    * \param p the packet
    * \param protocol next header value
-   * \param from address of the correspondent
+   * \param from address of the correspondant
    * \param to address of the destination
    * \param packetType type of the packet
    */
@@ -212,7 +209,6 @@ private:
   TrafficControlLayer (TrafficControlLayer const &);
   /**
    * \brief Assignment operator
-   * \return this object
    * Disable default implementation to avoid misuse
    */
   TrafficControlLayer& operator= (TrafficControlLayer const &);
@@ -230,38 +226,11 @@ private:
   /**
    * \brief Information to store for each device
    */
-  class NetDeviceInfo
-  {
-  public:
-    /**
-     * \brief Constructor
-     *
-     * \param rootQueueDisc the root queue disc installed on the device
-     * \param ndqi the NetDeviceQueueInterface aggregated to the device
-     * \param queueDiscsToWake the vector of queue discs to wake
-     * \param selectQueueCallback the select queue callback
-     */
-    NetDeviceInfo (Ptr<QueueDisc> rootQueueDisc, Ptr<NetDeviceQueueInterface> ndqi,
-                   QueueDiscVector queueDiscsToWake, SelectQueueCallback selectQueueCallback);
-    virtual ~NetDeviceInfo ();
-
-    Ptr<QueueDisc> m_rootQueueDisc;       //!< the root queue disc on the device
-    Ptr<NetDeviceQueueInterface> m_ndqi;  //!< the netdevice queue interface
-    QueueDiscVector m_queueDiscsToWake;   //!< the vector of queue discs to wake
-    SelectQueueCallback m_selectQueueCallback;  //!< the select queue callback
-  private:
-    NetDeviceInfo ();
-    /**
-     * \brief Copy constructor
-     * Disable default implementation to avoid misuse
-     */
-    NetDeviceInfo (NetDeviceInfo const &);
-    /**
-     * \brief Assignment operator
-     * \return this object
-     * Disable default implementation to avoid misuse
-     */
-    NetDeviceInfo& operator= (NetDeviceInfo const &);
+  struct NetDeviceInfo {
+    Ptr<QueueDisc> rootQueueDisc;       //!< the root queue disc on the device
+    Ptr<NetDeviceQueueInterface> ndqi;  //!< the netdevice queue interface
+    QueueDiscVector queueDiscsToWake;   //!< the vector of queue discs to wake
+    SelectQueueCallback selectQueueCallback;  //!< the select queue callback
   };
 
   /// Typedef for protocol handlers container

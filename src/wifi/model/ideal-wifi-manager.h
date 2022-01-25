@@ -44,37 +44,32 @@ namespace ns3 {
 class IdealWifiManager : public WifiRemoteStationManager
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
   IdealWifiManager ();
   virtual ~IdealWifiManager ();
 
-  void SetupPhy (const Ptr<WifiPhy> phy);
+  virtual void SetupPhy (Ptr<WifiPhy> phy);
 
+  virtual void SetHeSupported (bool enable); //HE rates not yet supported
 
 private:
-  //overridden from base class
-  void DoInitialize (void);
-  WifiRemoteStation* DoCreateStation (void) const;
-  void DoReportRxOk (WifiRemoteStation *station,
-                     double rxSnr, WifiMode txMode);
-  void DoReportRtsFailed (WifiRemoteStation *station);
-  void DoReportDataFailed (WifiRemoteStation *station);
-  void DoReportRtsOk (WifiRemoteStation *station,
-                      double ctsSnr, WifiMode ctsMode, double rtsSnr);
-  void DoReportDataOk (WifiRemoteStation *station,
-                       double ackSnr, WifiMode ackMode, double dataSnr);
-  void DoReportAmpduTxStatus (WifiRemoteStation *station,
-                              uint8_t nSuccessfulMpdus, uint8_t nFailedMpdus,
-                              double rxSnr, double dataSnr);
-  void DoReportFinalRtsFailed (WifiRemoteStation *station);
-  void DoReportFinalDataFailed (WifiRemoteStation *station);
-  WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
-  WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
-  bool IsLowLatency (void) const;
+  //overriden from base class
+  virtual void DoInitialize (void);
+  virtual WifiRemoteStation* DoCreateStation (void) const;
+  virtual void DoReportRxOk (WifiRemoteStation *station,
+                             double rxSnr, WifiMode txMode);
+  virtual void DoReportRtsFailed (WifiRemoteStation *station);
+  virtual void DoReportDataFailed (WifiRemoteStation *station);
+  virtual void DoReportRtsOk (WifiRemoteStation *station,
+                              double ctsSnr, WifiMode ctsMode, double rtsSnr);
+  virtual void DoReportDataOk (WifiRemoteStation *station,
+                               double ackSnr, WifiMode ackMode, double dataSnr);
+  virtual void DoReportAmpduTxStatus (WifiRemoteStation *station, uint8_t nSuccessfulMpdus, uint8_t nFailedMpdus, double rxSnr, double dataSnr);
+  virtual void DoReportFinalRtsFailed (WifiRemoteStation *station);
+  virtual void DoReportFinalDataFailed (WifiRemoteStation *station);
+  virtual WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
+  virtual WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
+  virtual bool IsLowLatency (void) const;
 
   /**
    * Return the minimum SNR needed to successfully transmit
@@ -96,10 +91,10 @@ private:
 
   /**
    * Convenience function for selecting a channel width for legacy mode
-   * \param mode legacy WifiMode
+   * \param non-(V)HT WifiMode
    * \return the channel width (MHz) for the selected mode
    */
-  uint16_t GetChannelWidthForMode (WifiMode mode) const;
+  uint8_t GetChannelWidthForMode (WifiMode mode) const;
 
   /**
    * A vector of <snr, WifiTxVector> pair holding the minimum SNR for the

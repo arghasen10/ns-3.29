@@ -64,7 +64,7 @@ class TimeWithUnit;
  *
  * This class defines all the classic C++ addition/subtraction
  * operators: +, -, +=, -=; and all the classic comparison operators:
- * ==, !=, <, >, <=, >=. It is thus easy to add, subtract, or
+ * ==, !=, <, >, <=, >=. It is thus easy to add, substract, or
  * compare Time objects.
  *
  * For example:
@@ -124,7 +124,7 @@ public:
    *  Assignment operator
    * \param [in] o Time to assign.
    * \return The Time.
-   */
+   */      
   inline Time & operator = (const Time & o)
   {
     m_data = o.m_data;
@@ -136,34 +136,20 @@ public:
   {
     if (g_markingTimes)
       {
-        Mark (this);
+	Mark (this);
       }
   }
   /**
    *  Copy constructor
    *
    * \param [in] o Time to copy
-   */
+   */      
   inline Time(const Time & o)
     : m_data (o.m_data)
   {
     if (g_markingTimes)
       {
-        Mark (this);
-      }
-  }
-
-  /**
-   * \brief Move constructor
-   *
-   * \param [in] o Time from which take the data
-   */
-  Time (Time &&o)
-    : m_data (o.m_data)
-  {
-    if (g_markingTimes)
-      {
-        Mark (this);
+	Mark (this);
       }
   }
   /**
@@ -394,7 +380,7 @@ public:
   }
   inline double GetDouble (void) const
   {
-    return static_cast<double> (m_data);
+    return m_data;
   }
   inline int64_t GetInteger (void) const
   {
@@ -544,13 +530,6 @@ public:
    * \return The Time with embedded unit.
    */
   TimeWithUnit As (const enum Unit unit) const;
-
-  /**
-   * TracedCallback signature for Time
-   *
-   * \param [in] value Current value of Time
-   */
-  typedef void (* TracedCallback)(Time value);
 
 private:
   /** How to convert between other units and the current unit. */

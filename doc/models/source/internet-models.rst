@@ -8,5 +8,4 @@ Internet Models (IP, TCP, Routing, UDP, Internet Applications)
    ipv6
    routing-overview
    tcp
-   udp
    internet-apps

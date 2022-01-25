@@ -30,11 +30,10 @@ using namespace ns3;
 
 AnimationInterface * pAnim = 0;
 
-/// RGB structure
 struct rgb {
-  uint8_t r; ///< red
-  uint8_t g; ///< green
-  uint8_t b; ///< blue
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
 };
 
 struct rgb colors [] = {
@@ -151,7 +150,7 @@ int main (int argc, char *argv[])
   pAnim = new AnimationInterface (animFile);
   Simulator::Schedule (Seconds (1), modify);
   
-  // Set up the actual simulation
+  // Set up the acutal simulation
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   Simulator::Run ();

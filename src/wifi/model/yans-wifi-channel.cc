@@ -18,17 +18,12 @@
  * Author: Mathieu Lacage, <mathieu.lacage@sophia.inria.fr>
  */
 
-#include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/log.h"
 #include "ns3/pointer.h"
-#include "ns3/net-device.h"
-#include "ns3/node.h"
+#include "yans-wifi-channel.h"
 #include "ns3/propagation-loss-model.h"
 #include "ns3/propagation-delay-model.h"
-#include "ns3/mobility-model.h"
-#include "yans-wifi-channel.h"
-#include "yans-wifi-phy.h"
 #include "wifi-utils.h"
 
 namespace ns3 {
@@ -58,33 +53,29 @@ YansWifiChannel::GetTypeId (void)
 
 YansWifiChannel::YansWifiChannel ()
 {
-  NS_LOG_FUNCTION (this);
 }
 
 YansWifiChannel::~YansWifiChannel ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   m_phyList.clear ();
 }
 
 void
-YansWifiChannel::SetPropagationLossModel (const Ptr<PropagationLossModel> loss)
+YansWifiChannel::SetPropagationLossModel (Ptr<PropagationLossModel> loss)
 {
-  NS_LOG_FUNCTION (this << loss);
   m_loss = loss;
 }
 
 void
-YansWifiChannel::SetPropagationDelayModel (const Ptr<PropagationDelayModel> delay)
+YansWifiChannel::SetPropagationDelayModel (Ptr<PropagationDelayModel> delay)
 {
-  NS_LOG_FUNCTION (this << delay);
   m_delay = delay;
 }
 
 void
 YansWifiChannel::Send (Ptr<YansWifiPhy> sender, Ptr<const Packet> packet, double txPowerDbm, Time duration) const
 {
-  NS_LOG_FUNCTION (this << sender << packet << txPowerDbm << duration.GetSeconds ());
   Ptr<MobilityModel> senderMobility = sender->GetMobility ();
   NS_ASSERT (senderMobility != 0);
   for (PhyList::const_iterator i = m_phyList.begin (); i != m_phyList.end (); i++)
@@ -115,27 +106,26 @@ YansWifiChannel::Send (Ptr<YansWifiPhy> sender, Ptr<const Packet> packet, double
             }
 
           Simulator::ScheduleWithContext (dstNode,
-                                          delay, &YansWifiChannel::Receive,
+                                          delay, &YansWifiChannel::Receive, this,
                                           (*i), copy, rxPowerDbm, duration);
         }
     }
 }
 
 void
-YansWifiChannel::Receive (Ptr<YansWifiPhy> phy, Ptr<Packet> packet, double rxPowerDbm, Time duration)
+YansWifiChannel::Receive (Ptr<YansWifiPhy> phy, Ptr<Packet> packet, double rxPowerDbm, Time duration) const
 {
-  NS_LOG_FUNCTION (phy << packet << rxPowerDbm << duration.GetSeconds ());
   phy->StartReceivePreambleAndHeader (packet, DbmToW (rxPowerDbm + phy->GetRxGain ()), duration);
 }
 
-std::size_t
+uint32_t
 YansWifiChannel::GetNDevices (void) const
 {
   return m_phyList.size ();
 }
 
 Ptr<NetDevice>
-YansWifiChannel::GetDevice (std::size_t i) const
+YansWifiChannel::GetDevice (uint32_t i) const
 {
   return m_phyList[i]->GetDevice ()->GetObject<NetDevice> ();
 }
@@ -143,14 +133,12 @@ YansWifiChannel::GetDevice (std::size_t i) const
 void
 YansWifiChannel::Add (Ptr<YansWifiPhy> phy)
 {
-  NS_LOG_FUNCTION (this << phy);
   m_phyList.push_back (phy);
 }
 
 int64_t
 YansWifiChannel::AssignStreams (int64_t stream)
 {
-  NS_LOG_FUNCTION (this << stream);
   int64_t currentStream = stream;
   currentStream += m_loss->AssignStreams (stream);
   return (currentStream - stream);

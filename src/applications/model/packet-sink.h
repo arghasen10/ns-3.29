@@ -110,6 +110,9 @@ private:
    * \param from the address the connection is from
    */
   void HandleAccept (Ptr<Socket> socket, const Address& from);
+
+  void SendSingledata(Ptr<Packet> p, Address from, Ptr<Socket> socket);
+  void SendSingleVoicecall (Address from, Ptr<Socket> socket);
   /**
    * \brief Handle an connection close
    * \param socket the connected socket
@@ -128,13 +131,11 @@ private:
 
   Address         m_local;        //!< Local address to bind to
   uint64_t        m_totalRx;      //!< Total bytes received
+  uint32_t        m_sent;
   TypeId          m_tid;          //!< Protocol TypeId
 
   /// Traced Callback: received packets, source address.
   TracedCallback<Ptr<const Packet>, const Address &> m_rxTrace;
-
-  /// Callback for tracing the packet Rx events, includes source and destination addresses
-  TracedCallback<Ptr<const Packet>, const Address &, const Address &> m_rxTraceWithAddresses;
 
 };
 

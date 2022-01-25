@@ -49,11 +49,6 @@ VhtCapabilities::VhtCapabilities ()
 {
   m_rxMcsMap.resize (8,0);
   m_txMcsMap.resize (8,0);
-  for (uint8_t i = 0; i < 8; i++) //set to 3 by default, i.e. #spatial streams not supported. 0 means supported up to MCS 7, not what we want to imply at this stage.
-    {
-      m_rxMcsMap[i] = 3;
-      m_txMcsMap[i] = 3;
-    }
 }
 
 WifiInformationElementId
@@ -71,7 +66,7 @@ VhtCapabilities::SetVhtSupported (uint8_t vhtsupported)
 uint8_t
 VhtCapabilities::GetInformationFieldSize () const
 {
-  //we should not be here if vht is not supported
+  //we should not be here if ht is not supported
   NS_ASSERT (m_vhtSupported > 0);
   return 12;
 }
@@ -112,7 +107,7 @@ VhtCapabilities::DeserializeInformationField (Buffer::Iterator start,
                                               uint8_t length)
 {
   Buffer::Iterator i = start;
-  uint32_t vhtinfo = i.ReadLsbtohU32 ();
+  uint16_t vhtinfo = i.ReadLsbtohU32 ();
   uint64_t mcsset = i.ReadLsbtohU64 ();
   SetVhtCapabilitiesInfo (vhtinfo);
   SetSupportedMcsAndNssSet (mcsset);
@@ -181,7 +176,7 @@ VhtCapabilities::SetSupportedMcsAndNssSet (uint64_t ctrl)
   m_rxHighestSupportedLongGuardIntervalDataRate = (ctrl >> 16) & 0x1fff;
   for (uint8_t i = 0; i < 8; i++)
     {
-      n = (i * 2) + 32;
+      uint16_t n = (i * 2) + 32;
       m_txMcsMap[i] = (ctrl >> n) & 0x03;
     }
   m_txHighestSupportedLongGuardIntervalDataRate = (ctrl >> 48) & 0x1fff;
@@ -195,15 +190,15 @@ VhtCapabilities::GetSupportedMcsAndNssSet () const
   for (uint8_t i = 0; i < 8; i++)
     {
       n = i * 2;
-      val |= (static_cast<uint64_t> (m_rxMcsMap[i]) & 0x03) << n;
+      val |= ((uint64_t)m_rxMcsMap[i] & 0x03) << n;
     }
-  val |=  (static_cast<uint64_t> (m_rxHighestSupportedLongGuardIntervalDataRate) & 0x1fff) << 16;
+  val |=  ((uint64_t)m_rxHighestSupportedLongGuardIntervalDataRate & 0x1fff) << 16;
   for (uint8_t i = 0; i < 8; i++)
     {
       n = (i * 2) + 32;
-      val |= (static_cast<uint64_t> (m_txMcsMap[i]) & 0x03) << n;
+      val |= ((uint64_t)m_txMcsMap[i] & 0x03) << n;
     }
-  val |= (static_cast<uint64_t> (m_txHighestSupportedLongGuardIntervalDataRate) & 0x1fff) << 48;
+  val |= ((uint64_t)m_txHighestSupportedLongGuardIntervalDataRate & 0x1fff) << 48;
   return val;
 }
 
@@ -256,11 +251,35 @@ VhtCapabilities::SetMaxAmpduLengthExponent (uint8_t exponent)
 }
 
 void
+VhtCapabilities::SetRxMcsMap (uint16_t map)
+{
+  //Set each element in the map accoriding to the 2 bits representing it page 98 in the 11ac standard
+  uint8_t n;
+  for (uint8_t i = 0; i < 8; i++)
+    {
+      n = i * 2;
+      m_rxMcsMap[i] = (map >> n) & 0x03;
+    }
+}
+
+void
 VhtCapabilities::SetRxMcsMap (uint8_t mcs, uint8_t nss)
 {
   //MCS index should be at least 7 and should not exceed 9
   NS_ASSERT (mcs >= 7 && mcs <= 9);
   m_rxMcsMap[nss - 1] = mcs - 7; //1 = MCS 8; 2 = MCS 9
+}
+
+void
+VhtCapabilities::SetTxMcsMap (uint16_t map)
+{
+  //Set each element in the map accoriding to the 2 bits representing it page 98 in the 11ac standard
+  uint8_t n;
+  for (uint8_t i = 0; i < 8; i++)
+    {
+      n = i * 2;
+      m_txMcsMap[i] = (map >> n) & 0x03;
+    }
 }
 
 void
@@ -322,6 +341,12 @@ VhtCapabilities::SetTxHighestSupportedLgiDataRate (uint16_t supporteddatarate)
 }
 
 uint8_t
+VhtCapabilities::GetMaxMpduLength () const
+{
+  return m_maxMpduLength;
+}
+
+uint8_t
 VhtCapabilities::GetSupportedChannelWidthSet () const
 {
   return m_supportedChannelWidthSet;
@@ -334,6 +359,18 @@ VhtCapabilities::GetRxLdpc () const
 }
 
 uint8_t
+VhtCapabilities::GetShortGuardIntervalFor80Mhz () const
+{
+  return m_shortGuardIntervalFor80Mhz;
+}
+
+uint8_t
+VhtCapabilities::GetShortGuardIntervalFor160Mhz () const
+{
+  return m_shortGuardIntervalFor160Mhz;
+}
+
+uint8_t
 VhtCapabilities::GetRxStbc () const
 {
   return m_rxStbc;
@@ -343,6 +380,12 @@ uint8_t
 VhtCapabilities::GetTxStbc () const
 {
   return m_txStbc;
+}
+
+uint8_t
+VhtCapabilities::GetMaxAmpduLengthExponent () const
+{
+  return m_maxAmpduLengthExponent;
 }
 
 bool
@@ -365,25 +408,62 @@ VhtCapabilities::IsSupportedMcs (uint8_t mcs, uint8_t nss) const
 }
 
 uint16_t
+VhtCapabilities::GetRxMcsMap () const
+{
+  uint16_t val = 0;
+  uint8_t n;
+  for (uint8_t i = 0; i < 8; i++)
+    {
+      n = i * 2;
+      val |= (m_rxMcsMap[i] & 0x03) << n;
+    }
+  return val;
+}
+
+uint16_t
+VhtCapabilities::GetTxMcsMap () const
+{
+  uint16_t val = 0;
+  uint8_t n;
+  for (uint8_t i = 0; i < 8; i++)
+    {
+      n = i * 2;
+      val |= (m_txMcsMap[i] & 0x03) << n;
+    }
+  return val;
+}
+
+uint16_t
 VhtCapabilities::GetRxHighestSupportedLgiDataRate () const
 {
   return m_rxHighestSupportedLongGuardIntervalDataRate;
 }
 
-/**
- * output stream output operator
- *
- * \param os output stream
- * \param VhtCapabilities the VHT capabilities
- *
- * \returns output stream
- */
+uint16_t
+VhtCapabilities::GetTxHighestSupportedLgiDataRate () const
+{
+  return m_txHighestSupportedLongGuardIntervalDataRate;
+}
+
+ATTRIBUTE_HELPER_CPP (VhtCapabilities);
+
 std::ostream &
 operator << (std::ostream &os, const VhtCapabilities &VhtCapabilities)
 {
   os <<  VhtCapabilities.GetVhtCapabilitiesInfo () << "|" << VhtCapabilities.GetSupportedMcsAndNssSet ();
 
   return os;
+}
+
+std::istream &operator >> (std::istream &is,VhtCapabilities &VhtCapabilities)
+{
+  uint32_t c1;
+  uint64_t c2;
+  is >>  c1 >> c2;
+  VhtCapabilities.SetVhtCapabilitiesInfo (c1);
+  VhtCapabilities.SetSupportedMcsAndNssSet (c2);
+
+  return is;
 }
 
 } //namespace ns3

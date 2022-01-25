@@ -161,7 +161,14 @@ LteEnbPhy::LteEnbPhy (Ptr<LteSpectrumPhy> dlPhy, Ptr<LteSpectrumPhy> ulPhy)
     m_srsPeriodicity (0),
     m_srsStartTime (Seconds (0)),
     m_currentSrsOffset (0),
-    m_interferenceSampleCounter (0)
+    m_interferenceSampleCounter (0),
+    m_mibNbPartCounter(0), // Used by NB-IoT standard to trace the current MIB-NB part.
+    m_schedulingInfoSib1NbGenerator(0),  // Used by NB-IoT standard to generate properly the SIB1-NB scheduling info.
+    m_sib1NbRepetitions(0),  // Used by NB-IoT to trace the number of repetitions of SIB1-NB.
+    m_T(128),
+    m_nb(128),
+    m_pf(0),
+    m_po(0)
 {
   m_enbPhySapProvider = new EnbMemberLteEnbPhySapProvider (this);
   m_enbCphySapProvider = new MemberLteEnbCphySapProvider<LteEnbPhy> (this);
@@ -290,6 +297,18 @@ LteEnbPhy::DoInitialize ()
 }
 
 
+/*
+ * \todo
+ *
+ * Implementation of the EnableNbIoTMode method needed to enable the NB-IoT mode.
+ * It is a temporary solution. To get more information about
+ * see the declaration of the method.
+ */
+void
+LteEnbPhy::EnableNbIotMode(){
+  m_EnabledNbIot = true;
+}
+
 void
 LteEnbPhy::SetLteEnbPhySapUser (LteEnbPhySapUser* s)
 {
@@ -354,22 +373,43 @@ LteEnbPhy::GetNoiseFigure () const
 void
 LteEnbPhy::SetMacChDelay (uint8_t delay)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this << (int)delay);
   m_macChTtiDelay = delay;
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_packetBurstQueue.size():" << m_packetBurstQueue.size() << " m_controlMessagesQueue.size():" << m_controlMessagesQueue.size() << " m_dlControlMessagesQueue.size() "  << m_dlControlMessagesQueue.size() << "\n";
+#endif
   for (int i = 0; i < m_macChTtiDelay; i++)
     {
       Ptr<PacketBurst> pb = CreateObject <PacketBurst> ();
       m_packetBurstQueue.push_back (pb);
       std::list<Ptr<LteControlMessage> > l;
       m_controlMessagesQueue.push_back (l);
+      m_dlControlMessagesQueue.push_back (l);
       std::list<UlDciLteControlMessage> l1;
       m_ulDciQueue.push_back (l1);
     }
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_packetBurstQueue.size():" << m_packetBurstQueue.size() << " m_controlMessagesQueue.size():" << m_controlMessagesQueue.size() << " m_dlControlMessagesQueue.size() "  << m_dlControlMessagesQueue.size() << "\n";
+#endif  
   for (int i = 0; i < UL_PUSCH_TTIS_DELAY; i++)
     {
       std::list<UlDciLteControlMessage> l1;
       m_ulDciQueue.push_back (l1);
     }
+  for (int i = 0; i < DL_PDSCH_TTIS_DELAY; i++)
+    {
+      std::list<DlDciLteControlMessage> l1;
+      m_dlDciQueue.push_back (l1);
+
+      /*Ptr<PacketBurst> pb = CreateObject <PacketBurst> ();
+      m_packetBurstQueue.push_back (pb);*/
+
+      /*std::list<Ptr<LteControlMessage> > l;
+      m_controlMessagesQueue.push_back (l);*/
+    }
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_packetBurstQueue.size():" << m_packetBurstQueue.size() << " m_controlMessagesQueue.size():" << m_controlMessagesQueue.size() << " m_dlControlMessagesQueue.size() "  << m_dlControlMessagesQueue.size() << "\n\n";
+#endif  
 }
 
 uint8_t
@@ -432,6 +472,7 @@ void
 LteEnbPhy::DoSendMacPdu (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this);
+  //std::cout<< Simulator::Now().GetSeconds()<<" LteEnbPhy::DoSendMacPdu Packet_size: "<<p->GetSize()<<std::endl;
   SetMacPdu (p);
 }
 
@@ -477,7 +518,8 @@ LteEnbPhy::GetDownlinkSubChannels (void)
 void
 LteEnbPhy::GeneratePowerAllocationMap (uint16_t rnti, int rbId)
 {
-  NS_LOG_FUNCTION (this);
+  //NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this << rnti);
   double rbgTxPower = m_txPower;
 
   std::map<uint16_t, double>::iterator it = m_paMap.find (rnti);
@@ -590,7 +632,69 @@ LteEnbPhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgL
     }
 }
 
+void
+LteEnbPhy::CalculatePagingInfo (void)
+{
+    m_T   = 128;
+    m_nb  = 1*m_T;
+    uint16_t ue_id = 1;//m_imsi%1024;
+    uint16_t N = std::min(m_T,m_nb);
+    //uint16_t RHS = (m_T/N) * (ue_id%N);
+    int32_t temp = int32_t((m_nb/m_T));
+    int32_t Ns = (std::max(1,temp));
+    int32_t i_s = int32_t(floor(ue_id/N))%Ns;
 
+    if (0 == i_s)
+    {
+        switch(Ns)
+        {
+            case 1:
+                m_po = 9;
+                break;
+            case 2:
+                m_po = 4;
+                break;
+            case 4:
+                m_po = 0;
+                break;
+        }
+    }
+    else if (1 == i_s)
+    {
+        switch(Ns)
+        {
+            case 2:
+                m_po = 9;
+                break;
+            case 4:
+                m_po = 4;
+                break;
+        }
+    }
+    else if (2 == i_s && 4 == Ns)
+    {
+        m_po = 5;
+    }
+    else if (3 == i_s && 4 == Ns)
+    {
+        m_po = 9;
+    }
+    else
+    {
+        m_po = 0; // Assumed for "Not define"
+    }
+
+    //m_pf =  RHS;
+    /*if (m_requirepagingflag)
+    {
+        m_pf = (m_pf) + m_T;
+    }*/
+    m_pf = 3;
+
+    NS_LOG_FUNCTION (this << "pf" << m_pf <<"po" << m_po);
+
+
+}
 
 void
 LteEnbPhy::StartFrame (void)
@@ -601,15 +705,173 @@ LteEnbPhy::StartFrame (void)
   NS_LOG_INFO ("-----frame " << m_nrFrames << "-----");
   m_nrSubFrames = 0;
 
-  // send MIB at beginning of every frame
-  m_mib.systemFrameNumber = m_nrSubFrames;
-  Ptr<MibLteControlMessage> mibMsg = Create<MibLteControlMessage> ();
-  mibMsg->SetMib (m_mib);
-  m_controlMessagesQueue.at (0).push_back (mibMsg);
+  //CalculatePagingInfo();
+  if(m_EnabledNbIot==false) // Legacy LTE condition
+    {
+      // send MIB at beginning of every frame
+      m_mib.systemFrameNumber = m_nrSubFrames;
+      Ptr<MibLteControlMessage> mibMsg = Create<MibLteControlMessage> ();
+      mibMsg->SetMib (m_mib);
+      m_controlMessagesQueue.at (0).push_back (mibMsg);
 
+    }
+  else  // NB-IoT condition (enabled)
+    {
+      // send MIB-NB message part or a new one if it is the correct turn in the scheduling.
+
+          NS_LOG_FUNCTION (this << "NB-IoT");
+      // NOTE: The Subframes number is 0, so we have to control the Frame number only.
+      if((m_nrFrames % 64) == 0)
+        {
+          // Send a new MIB-NB message
+
+          // This is first part of the new MIB-NB message, so we have to initialize the counter again.
+          m_mibNbPartCounter = 0;
+
+
+          // Initialize the generator of the schedulingInfoSib1Generator.
+          m_schedulingInfoSib1NbGenerator++;
+          m_schedulingInfoSib1NbGenerator = (m_schedulingInfoSib1NbGenerator) % 12;
+
+
+          /*
+           * This is a simplification of the information present in the Most Significant Byte
+           * of the System Frame Number. A single MIB-NB is divided into 8 parts. Each part has
+           * to be sent at the beginning of every subframe. A MIB-NB message is transmitted 8 times
+           * before to change his value.
+           */
+          m_mibNb.systemFrameNumberMsb = m_mibNbPartCounter;
+
+
+        }
+      else
+        {
+          /*
+           * We must set properly the content of the subframe number zero on a radio frame that is
+           * under the MIB-NB period (SFN mod 64 != 0).
+           */
+
+          //Increment the counter of MIB-NB part.
+          m_mibNbPartCounter++;
+
+          if(m_mibNbPartCounter == 8)
+            {
+              //We must repeat the last MIB-NB message sent.
+              m_mibNbPartCounter = 0;
+
+              // This is the only thing we need to change.
+            }
+
+          m_mibNb.systemFrameNumberMsb = m_mibNbPartCounter;
+
+
+        }
+
+      // We suppose the UE will not wait for a System Information Block Type 14. So it is not needed to enable AB.
+      m_mibNb.abEnabled = false;
+
+
+     /*
+      * We suppose to use Inband Same PCI mode, cause it is equal to legacy LTE.
+      *
+      * \todo
+      * Till now, it is not present a method to gave some information about the
+      * CRS (Cell Specific Reference Signal).
+      * So, we will set up an insignificant value.
+      *
+      * Anyway, in future, if CRS will be passed to this module it will be used.
+      * Otherwise, we could substitute the OperationMode structure with an enumetation.
+      *
+      */
+     m_mibNb.operationMode.inbandSamePci.eutraCrsSequenceInfo = 1;
+
+
+     /*
+      * We generate the schedulingInfoSib1 in a controlled way from 0 to 11.
+      * Values from 12 to 15 are reserved.
+      *
+      * In future this assignment will vary.
+      *
+      * To get more information about this parameter see the document 36.213, Table 16.4.1.3-3.
+      */
+      m_mibNb.schedulingInfoSib1 = (m_schedulingInfoSib1NbGenerator + m_mibNbPartCounter) % 12;
+
+
+      /*
+       * Number of the radio frame. This is a simplification cause we have to load only the 2
+       * LSB of the system frame number.
+       */
+      m_mibNb.hyperSfnLsb = m_nrFrames;
+
+
+      Ptr<MibNbLteControlMessage> mibMsg = Create<MibNbLteControlMessage>();
+
+      mibMsg->SetMibNb(m_mibNb);
+
+      m_controlMessagesQueue.at (0).push_back (mibMsg);
+
+      if((m_nrFrames % 256) == 0) // Set a new SIB1-NB period
+        {
+          m_sib1NbPeriod=true;
+
+          switch(m_mibNb.schedulingInfoSib1)
+            {
+              case 0:
+              case 3:
+              case 6:
+              case 9:
+                m_sib1NbRepetitions = 4;
+                break;
+
+              case 1:
+              case 4:
+              case 7:
+              case 10:
+                m_sib1NbRepetitions = 8;
+                break;
+
+              default:
+                m_sib1NbRepetitions = 16;
+                break;
+            }
+        }
+
+    }
+
+  // Once MIB or MIB-NB are enqueued we can start the composition of an another subframe.
   StartSubFrame ();
 }
 
+// Looks like a work around function
+void LteEnbPhy::DoUpdatePagingParam(void)
+{
+    NS_LOG_FUNCTION (this<<m_nrFrames<<m_nrSubFrames);
+    if (m_nrSubFrames >=0 && m_nrSubFrames+1<=10)
+     {
+          m_pf = m_nrFrames;
+          (m_po) = m_nrSubFrames + 1;
+     }
+    else if(m_nrSubFrames+1>10)
+     {
+          m_pf = m_nrFrames+1;
+          (m_po) = 1;
+     }
+}
+void
+LteEnbPhy::StartPaging (void)
+{
+    //std::cout<<m_pf<<"="<<m_nrFrames<<" "<<m_po<<"="<<m_nrSubFrames<<std::endl;
+    if(m_pf == m_nrFrames && (m_po) == m_nrSubFrames)
+    {
+        NS_LOG_FUNCTION (this << m_pf<<m_nrSubFrames);
+        Ptr<PagingLteControlMessage> msg = Create<PagingLteControlMessage> ();
+        /* TODO: Set paging values */
+        //msg->m_count = ;
+
+        msg->SetPaging (m_paging);
+        m_controlMessagesQueue.at (0).push_back (msg);
+    }
+}
 
 void
 LteEnbPhy::StartSubFrame (void)
@@ -618,18 +880,66 @@ LteEnbPhy::StartSubFrame (void)
 
   ++m_nrSubFrames;
 
-  /*
-   * Send SIB1 at 6th subframe of every odd-numbered radio frame. This is
-   * equivalent with Section 5.2.1.2 of 3GPP TS 36.331, where it is specified
-   * "repetitions are scheduled in subframe #5 of all other radio frames for
-   * which SFN mod 2 = 0," except that 3GPP counts frames and subframes starting
-   * from 0, while ns-3 counts starting from 1.
-   */
-  if ((m_nrSubFrames == 6) && ((m_nrFrames % 2) == 1))
+  int temp_nrSubFrames = m_nrSubFrames;
+
+  StartPaging();
+
+  if(m_EnabledNbIot==false) //Legacy LTE condition
     {
-      Ptr<Sib1LteControlMessage> msg = Create<Sib1LteControlMessage> ();
-      msg->SetSib1 (m_sib1);
-      m_controlMessagesQueue.at (0).push_back (msg);
+      /*
+       * Send SIB1 at 6th subframe of every odd-numbered radio frame. This is
+       * equivalent with Section 5.2.1.2 of 3GPP TS 36.331, where it is specified
+       * "repetitions are scheduled in subframe #5 of all other radio frames for
+       * which SFN mod 2 = 0," except that 3GPP counts frames and subframes starting
+       * from 0, while ns-3 counts starting from 1.
+       */
+      if ((m_nrSubFrames == 6) && ((m_nrFrames % 2) == 1))
+        {
+          Ptr<Sib1LteControlMessage> msg = Create<Sib1LteControlMessage> ();
+          msg->SetSib1 (m_sib1);
+          m_controlMessagesQueue.at (0).push_back (msg);
+        }
+    }
+  else  //NB-IoT enabled
+    {
+      /*
+       * Send SIB1-NB if needed.
+       * SIB1-NB is transmitted over the NPDSCH. Its has a period of 256 radio frames and is
+       * repeated 4, 8 or 16 times. The transport block size and the number of repetitions is
+       * indicated in the MIB-NB. 4, 8 or 16 repetitions are possible, and 4 transport block sizes
+       * of 208, 328, 440 and 680 bits are defined, according to the  systemInformationBlockType1
+       * sent by the MIB-NB. The radio frame on which the SIB1-NB starts is determined by the
+       * number of repetitions and the NCellID.
+       * The SIB1-NB is transmitted in subframe #4 of every other frame in max 16 continuous frames.
+       */
+      if((m_nrSubFrames == 4)&&(m_sib1NbPeriod==true)&&(m_sib1NbRepetitions>0))
+        {
+
+          m_sib1NbRepetitions--;
+
+          /*
+           * This is a simplification of the effective implementation.
+           * Because we have to send only a part of the System Radio Frame Number.
+           * To get this value constant under the repetition we used the sum of
+           * the Radio Frame Number and the remaining number of SIB1-NB repetitions.
+           */
+          m_sib1Nb.hyperSfnMsbR13 = m_nrFrames + m_sib1NbRepetitions;
+
+
+
+          //Send SIB1-NB.
+          Ptr<Sib1NbLteControlMessage> msg = Create<Sib1NbLteControlMessage> ();
+          msg->SetSib1Nb(m_sib1Nb);
+          m_controlMessagesQueue.at (0).push_back (msg);
+
+        }
+
+      //Set the end of the SIB1-NB period
+      if(m_sib1NbRepetitions == 0)
+        {
+          m_sib1NbPeriod = false;
+        }
+
     }
 
   if (m_srsPeriodicity>0)
@@ -641,6 +951,12 @@ LteEnbPhy::StartSubFrame (void)
     }
   NS_LOG_INFO ("-----sub frame " << m_nrSubFrames << "-----");
   m_harqPhyModule->SubframeIndication (m_nrFrames, m_nrSubFrames);
+
+  //std::set <uint16_t> m_ueAttached;
+  //for (std::set <uint16_t>::iterator it = m_ueAttached.begin(); it != m_ueAttached.end(); ++it)
+  //  std::cout << *it << " ";
+  //std::cout << "\n";
+
 
   // update info on TB to be received
   std::list<UlDciLteControlMessage> uldcilist = DequeueUlDci ();
@@ -654,16 +970,33 @@ LteEnbPhy::StartSubFrame (void)
       if (it2 == m_ueAttached.end ())
         {
           NS_LOG_ERROR ("UE not attached");
+          std::cout << " UE not attached rnti:" <<  (*dciIt).GetDci ().m_rnti << "\n";
         }
       else
         {
           // send info of TB to LteSpectrumPhy 
           // translate to allocation map
           std::vector <int> rbMap;
-          for (int i = (*dciIt).GetDci ().m_rbStart; i < (*dciIt).GetDci ().m_rbStart + (*dciIt).GetDci ().m_rbLen; i++)
+          int N_rb_ul = m_ulBandwidth;
+          int N_prb = (*dciIt).GetDci ().m_riv / N_rb_ul + 1;
+          int RB_start = (*dciIt).GetDci ().m_riv % N_rb_ul;
+#ifdef DCI_BW_DEBUG
+          //std::cout << "[eNB] (AddExpectedTb) m_ulBandwidth " << (int)m_ulBandwidth  << " N_prb:" << (int)N_prb << " m_riv:" << (int)(*dciIt).GetDci ().m_riv << " m_rbStart:" << (int)(*dciIt).GetDci ().m_rbStart << " m_rbLen:" << (int)(*dciIt).GetDci ().m_rbLen << "\n";
+#endif
+          if(true/*(*dciIt).GetDci ().m_rar != 1*/)
+          {
+            for (int j = 0; j < N_prb; j++)
             {
-              rbMap.push_back (i);
+              rbMap.push_back (RB_start + j);
             }
+          }
+          /*else
+          {
+            for (int i = (*dciIt).GetDci ().m_rbStart; i < (*dciIt).GetDci ().m_rbStart + (*dciIt).GetDci ().m_rbLen; i++)
+              {
+                rbMap.push_back (i);
+              }                                     
+          }*/
           m_uplinkSpectrumPhy->AddExpectedTb ((*dciIt).GetDci ().m_rnti, (*dciIt).GetDci ().m_ndi, (*dciIt).GetDci ().m_tbSize, (*dciIt).GetDci ().m_mcs, rbMap, 0 /* always SISO*/, 0 /* no HARQ proc id in UL*/, 0 /*evaluated by LteSpectrumPhy*/, false /* UL*/);
           if ((*dciIt).GetDci ().m_ndi==1)
             {
@@ -675,60 +1008,138 @@ LteEnbPhy::StartSubFrame (void)
             }
         }
     }
-
+  // update info on TB to be send
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_dlDciQueue.size():" << m_dlDciQueue.size() << "\n";
+#endif
+  
+  std::list<Ptr<LteControlMessage> > ctrlMsg = GetControlMessages (temp_nrSubFrames);
   // process the current burst of control messages
-  std::list<Ptr<LteControlMessage> > ctrlMsg = GetControlMessages ();
-  m_dlDataRbMap.clear ();
-  m_dlPowerAllocationMap.clear ();
+  NS_LOG_FUNCTION (this << " LteEnbPhy::process the current burst of control messages==================================");
   if (ctrlMsg.size () > 0)
     {
       std::list<Ptr<LteControlMessage> >::iterator it;
+      if(m_dlDciQueue.size()!= 0 && (temp_nrSubFrames == 2 ))
+      {
+        m_dlDataRbMap.clear ();
+        //m_dlCtrlRbMap.clear();
+        m_dlPowerAllocationMap.clear ();
+      }
       it = ctrlMsg.begin ();
       while (it != ctrlMsg.end ())
         {
           Ptr<LteControlMessage> msg = (*it);
           if (msg->GetMessageType () == LteControlMessage::DL_DCI)
             {
+              NS_LOG_FUNCTION (this << " LteEnbPhy::LteControlMessage::DL_DCI==================================");
               Ptr<DlDciLteControlMessage> dci = DynamicCast<DlDciLteControlMessage> (msg);
-              // get the tx power spectral density according to DL-DCI(s)
-              // translate the DCI to Spectrum framework
-              uint32_t mask = 0x1;
-              for (int i = 0; i < 32; i++)
+              QueueDlDci (*dci);
+              if(m_dlDciQueue.size()!= 0 && (temp_nrSubFrames == 2 ))
+              {
+                //m_dlDataRbMap.clear ();
+                //m_dlPowerAllocationMap.clear ();
+                std::list<DlDciLteControlMessage> dldcilist = DequeueDlDci ();
+                std::list<DlDciLteControlMessage>::iterator dldciIt = dldcilist.begin ();
+                NS_LOG_DEBUG (this << " eNB Expected TBs " << dldcilist.size ());
+                for (dldciIt = dldcilist.begin (); dldciIt!=dldcilist.end (); dldciIt++)
                 {
-                  if (((dci->GetDci ().m_rbBitmap & mask) >> i) == 1)
-                    {
-                      for (int k = 0; k < GetRbgSize (); k++)
-                        {
-                          m_dlDataRbMap.push_back ((i * GetRbgSize ()) + k);
-                          //NS_LOG_DEBUG(this << " [enb]DL-DCI allocated PRB " << (i*GetRbgSize()) + k);
-                          GeneratePowerAllocationMap (dci->GetDci ().m_rnti, (i * GetRbgSize ()) + k );
-                        }
-                    }
-                  mask = (mask << 1);
-                }
-              // fire trace of DL Tx PHY stats
-              for (uint8_t i = 0; i < dci->GetDci ().m_mcs.size (); i++)
-                {
-                  PhyTransmissionStatParameters params;
-                  params.m_cellId = m_cellId;
-                  params.m_imsi = 0; // it will be set by DlPhyTransmissionCallback in LteHelper
-                  params.m_timestamp = Simulator::Now ().GetMilliSeconds ();
-                  params.m_rnti = dci->GetDci ().m_rnti;
-                  params.m_txMode = 0; // TBD
-                  params.m_layer = i;
-                  params.m_mcs = dci->GetDci ().m_mcs.at (i);
-                  params.m_size = dci->GetDci ().m_tbsSize.at (i);
-                  params.m_rv = dci->GetDci ().m_rv.at (i);
-                  params.m_ndi = dci->GetDci ().m_ndi.at (i);
-                  params.m_ccId = m_componentCarrierId;
-                  m_dlPhyTransmission (params);
-                }
+                  // get the tx power spectral density according to DL-DCI(s)
+                  // translate the DCI to Spectrum framework
+                  uint32_t mask = 0x1;
+                  for (int i = 0; i < 32; i++)
+                  {
+                    if ((((*dldciIt).GetDci ().m_rbBitmap & mask) >> i) == 1)
+                      {
+                        for (int k = 0; k < GetRbgSize (); k++)
+                          {
+                            //m_dlDataRbMap.push_back ((i * GetRbgSize ()) + k);
+#ifdef DCI_BW_DEBUG
+                            NS_LOG_DEBUG(this << " [enb]DL-DCI allocated PRB " << (i*GetRbgSize()) + k);
+                            std::cout << " [enb]DL-DCI allocated PRB " << (i*GetRbgSize()) + k << "\n";
+#endif
+                            GeneratePowerAllocationMap ((*dldciIt).GetDci ().m_rnti, (i * GetRbgSize ()) + k );
+                          }
+                      }
+                    mask = (mask << 1);
+                  }
+                  //=================================================================================
+                  int N_rb_dl = m_dlBandwidth;
+#ifdef DCI_BW_DEBUG
+                  std::cout << " m_dlBandwidth " << (int)m_dlBandwidth << "\n";
+#endif
+                  int N_prb = (*dldciIt).GetDci ().m_riv / N_rb_dl + 1;
+                  int RB_start = (*dldciIt).GetDci ().m_riv % N_rb_dl;
+                  for (int j = 0; j < N_prb; j++)
+                  {
+#ifdef DCI_BW_DEBUG 
+                    std::cout << " m_dlDataRbMap.size() " << m_dlDataRbMap.size() << "\n";
+#endif
+                    m_dlDataRbMap.push_back (RB_start + j);
+#ifdef DCI_BW_DEBUG
+                    std::cout << " m_dlDataRbMap.size() " << m_dlDataRbMap.size() << "\n";
+#endif
+                  }
+#ifdef DCI_BW_DEBUG
+                  NS_LOG_DEBUG(this << " RNTI " << (*dldciIt).GetDci ().m_rnti << " [enb]DL-DCI allocated PRB " << (*dldciIt).GetDci ().m_riv % 100 << " m_repetitionNumber: " << (*dldciIt).GetDci ().m_repetitionNumber);
+                  std::cout << " RNTI " << (*dldciIt).GetDci ().m_rnti << " [enb]DL-DCI allocated PRB " << (*dldciIt).GetDci ().m_riv % 100 << " m_repetitionNumber: " << (*dldciIt).GetDci ().m_repetitionNumber << "\n";
+                  //m_dlDataRbMap.push_back ((*dldciIt)->GetDci ().m_riv % 100);
+                  NS_LOG_DEBUG(this << " RB_start " << RB_start << " N_prb:" << N_prb);
+                  std::cout << " RB_start " << RB_start << " N_prb:" << N_prb << "\n";
+#endif
+                  //=================================================================================
 
+                  // fire trace of DL Tx PHY stats
+                  for (uint8_t i = 0; i < (*dldciIt).GetDci ().m_mcs.size (); i++)
+                    {
+                      PhyTransmissionStatParameters params;
+                      params.m_cellId = m_cellId;
+                      params.m_imsi = 0; // it will be set by DlPhyTransmissionCallback in LteHelper
+                      params.m_timestamp = Simulator::Now ().GetMilliSeconds () + DL_PDSCH_TTIS_DELAY;
+                      params.m_rnti = (*dldciIt).GetDci ().m_rnti;
+                      params.m_txMode = 0; // TBD
+                      params.m_layer = i;
+                      params.m_mcs = (*dldciIt).GetDci ().m_mcs.at (i);
+                      params.m_size = (*dldciIt).GetDci ().m_tbsSize.at (i);
+                      params.m_rv = (*dldciIt).GetDci ().m_rv.at (i);
+                      params.m_ndi = (*dldciIt).GetDci ().m_ndi.at (i);
+                      params.m_ccId = m_componentCarrierId;
+                      m_dlPhyTransmission (params);
+                    }
+                }
+              }
             }
           else if (msg->GetMessageType () == LteControlMessage::UL_DCI)
             {
-              Ptr<UlDciLteControlMessage> dci = DynamicCast<UlDciLteControlMessage> (msg);
-              QueueUlDci (*dci);
+              NS_LOG_FUNCTION (this << " LteEnbPhy::LteControlMessage::UL_DCI==================================(QueueUlDci)");
+              //std::cout <<  this << " LteEnbPhy::LteControlMessage::UL_DCI==================================(QueueUlDci)" << "\n";
+              Ptr<UlDciLteControlMessage> uldciMsg = DynamicCast<UlDciLteControlMessage> (msg);
+              QueueUlDci (*uldciMsg);
+
+
+              std::set <uint16_t>::iterator it2;
+              it2 = m_ueAttached.find ((*uldciMsg).GetDci ().m_rnti);
+
+              if (it2 == m_ueAttached.end ())
+                {
+                  NS_LOG_ERROR ("UE not attached");
+                  std::cout << " UE not attached rnti:" <<  (*uldciMsg).GetDci ().m_rnti << "\n";
+                }
+              else
+                {
+                  // send info of TB to LteSpectrumPhy 
+                  // translate to allocation map
+                  std::vector <int> rbMap;
+                  int N_rb_ul = m_ulBandwidth;
+                  int N_prb = (*uldciMsg).GetDci ().m_riv / N_rb_ul + 1;
+                  int RB_start = (*uldciMsg).GetDci ().m_riv % N_rb_ul;
+                  //std::cout << "[eNB] (UL_DCI) m_ulBandwidth " << (int)m_ulBandwidth  << " N_prb:" << (int)N_prb << " m_riv:" << (int)(*uldciMsg).GetDci ().m_riv << " m_rbStart:" << (int)(*uldciMsg).GetDci ().m_rbStart << " m_rbLen:" << (int)(*dciIt).GetDci ().m_rbLen << "\n";
+                  for (int j = 0; j < N_prb; j++)
+                    {
+                      rbMap.push_back (RB_start + j);
+                      //m_dlCtrlRbMap.push_back (RB_start + j);
+                    }
+                }
+                
             }
           else if (msg->GetMessageType () == LteControlMessage::RAR)
             {
@@ -744,6 +1155,15 @@ LteEnbPhy::StartSubFrame (void)
                   UlDciListElement_s dci;
                   dci.m_rnti = ulGrant.m_rnti;
                   dci.m_rbStart = ulGrant.m_rbStart;
+                  //=============================================
+#ifdef DCI_BW_DEBUG
+
+                  int N_rb_ul = m_ulBandwidth;
+                  int N_prb = ulGrant.m_riv / N_rb_ul + 1;
+                  int RB_start = ulGrant.m_riv % N_rb_ul;
+                  //std::cout << "[eNB] (ulGrant) m_ulBandwidth " << (int)m_ulBandwidth  << " N_prb:" << (int)N_prb << " m_riv:" << (int)ulGrant.m_riv << " m_rbStart:" << (int)ulGrant.m_rbStart << " m_rbLen:" << (int)ulGrant.m_rbLen << " RB_start:" << RB_start << "\n";
+#endif
+                  //=============================================
                   dci.m_rbLen = ulGrant.m_rbLen;
                   dci.m_tbSize = ulGrant.m_tbSize;
                   dci.m_mcs = ulGrant.m_mcs;
@@ -751,30 +1171,48 @@ LteEnbPhy::StartSubFrame (void)
                   dci.m_tpc = ulGrant.m_tpc;
                   dci.m_cqiRequest = ulGrant.m_cqiRequest;
                   dci.m_ndi = 1;
+                  dci.m_riv = ulGrant.m_riv;
+                  dci.m_rar = 1;
+                  dci.m_repetitionNumber = ulGrant.m_repetitionNumber;
                   UlDciLteControlMessage msg;
                   msg.SetDci (dci);
                   QueueUlDci (msg);
                 }
             }
           it++;
-
         }
     }
 
   SendControlChannels (ctrlMsg);
 
-  // send data frame
-  Ptr<PacketBurst> pb = GetPacketBurst ();
-  if (pb)
-    {
-      Simulator::Schedule (DL_CTRL_DELAY_FROM_SUBFRAME_START, // ctrl frame fixed to 3 symbols
-                           &LteEnbPhy::SendDataChannels,
-                           this,pb);
-    }
-
   // trigger the MAC
+  NS_LOG_FUNCTION (this << " LteEnbPhy::trigger the MAC==================================");
   m_enbPhySapUser->SubframeIndication (m_nrFrames, m_nrSubFrames);
 
+  
+  // send data frame
+  //if(m_nrSubFrames % 2 != 0)
+
+  //if(m_nrSubFrames % 2 != 0)
+  if(temp_nrSubFrames == 7)
+  {
+    NS_LOG_FUNCTION (this << "-----sub frame (SEND DATA): " << m_nrSubFrames << "----------------------------------------------------------------------------------------------------------------------------------");
+    Ptr<PacketBurst> pb = GetPacketBurst ();
+    if (pb)
+      {
+        NS_LOG_FUNCTION (this << " LteEnbPhy::SendDataChannels==================================");
+        Simulator::Schedule (DL_CTRL_DELAY_FROM_SUBFRAME_START, // ctrl frame fixed to 3 symbols
+                             &LteEnbPhy::SendDataChannels,
+                             this,pb);
+      }
+  }
+  else
+  {
+    NS_LOG_FUNCTION (this << "-----sub frame (DONOT SEND DATA): " << temp_nrSubFrames << "----------------------------------------------------------------------------------------------------------------------------------");
+  }
+
+
+  NS_LOG_FUNCTION (this << " LteEnbPhy::Schedule EndSubFrame==================================");
   Simulator::Schedule (Seconds (GetTti ()),
                        &LteEnbPhy::EndSubFrame,
                        this);
@@ -805,6 +1243,7 @@ LteEnbPhy::SendControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList)
 void
 LteEnbPhy::SendDataChannels (Ptr<PacketBurst> pb)
 {
+  NS_LOG_FUNCTION (this << " m_dlDataRbMap.size(): " << m_dlDataRbMap.size());
   // set the current tx power spectral density
   SetDownlinkSubChannelsWithPowerAllocation (m_dlDataRbMap);
   // send the current burts of packets
@@ -842,6 +1281,7 @@ void
 LteEnbPhy::GenerateCtrlCqiReport (const SpectrumValue& sinr)
 {
   NS_LOG_FUNCTION (this << sinr << Simulator::Now () << m_srsStartTime);
+  //std::cout << this<< " sinr:" << sinr << " " << Simulator::Now () << " " << m_srsStartTime << "\n";
   // avoid processing SRSs sent with an old SRS configuration index
   if (Simulator::Now () > m_srsStartTime)
     {
@@ -922,6 +1362,7 @@ LteEnbPhy::DoSetBandwidth (uint8_t ulBandwidth, uint8_t dlBandwidth)
           break;
         }
     }
+  m_rbgSize = 1;
 }
 
 void 
@@ -992,7 +1433,7 @@ LteEnbPhy::CreateSrsCqiReport (const SpectrumValue& sinr)
   for (it = sinr.ConstValuesBegin (); it != sinr.ConstValuesEnd (); it++)
     {
       double sinrdb = 10 * log10 ((*it));
-      //       NS_LOG_DEBUG ("ULCQI RB " << i << " value " << sinrdb);
+      //std::cout << "ULCQI RB " << i << " value " << sinrdb << "\n";
       // convert from double to fixed point notation Sxxxxxxxxxxx.xxx
       int16_t sinrFp = LteFfConverter::double2fpS11dot3 (sinrdb);
       srsSum += (*it);
@@ -1052,6 +1493,9 @@ std::list<UlDciLteControlMessage>
 LteEnbPhy::DequeueUlDci (void)
 {
   NS_LOG_FUNCTION (this);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_ulDciQueue.size():" << m_ulDciQueue.size() << "\n";
+#endif
   if (m_ulDciQueue.at (0).size ()>0)
     {
       std::list<UlDciLteControlMessage> ret = m_ulDciQueue.at (0);
@@ -1069,6 +1513,46 @@ LteEnbPhy::DequeueUlDci (void)
       return (emptylist);
     }
 }
+
+
+void
+LteEnbPhy::QueueDlDci (DlDciLteControlMessage m)
+{
+  NS_LOG_FUNCTION (this);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_dlDciQueue.size():" << m_dlDciQueue.size() << " m_dlDciQueue.at(0).size(): " << m_dlDciQueue.at (0).size() << "\n";
+#endif  
+  m_dlDciQueue.at (DL_PDSCH_TTIS_DELAY - 1).push_back (m);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_dlDciQueue.size():" << m_dlDciQueue.size() << " m_dlDciQueue.at(0).size(): " << m_dlDciQueue.at (0).size() << "\n\n";
+#endif  
+}
+
+std::list<DlDciLteControlMessage>
+LteEnbPhy::DequeueDlDci (void)
+{
+  NS_LOG_FUNCTION (this);
+#ifdef DEBUG_CONTROL_DATA_QUEUE
+  std::cout << "m_dlDciQueue.size():" << m_dlDciQueue.size() << " m_dlDciQueue.at(0).size(): " << m_dlDciQueue.at (0).size() << "\n\n";
+#endif  
+  if (m_dlDciQueue.at (0).size ()>0)
+    {
+      std::list<DlDciLteControlMessage> ret = m_dlDciQueue.at (0);
+      m_dlDciQueue.erase (m_dlDciQueue.begin ());
+      std::list<DlDciLteControlMessage> l;
+      m_dlDciQueue.push_back (l);
+      return (ret);
+    }
+  else
+    {
+      m_dlDciQueue.erase (m_dlDciQueue.begin ());
+      std::list<DlDciLteControlMessage> l;
+      m_dlDciQueue.push_back (l);
+      std::list<DlDciLteControlMessage> emptylist;
+      return (emptylist);
+    }
+}
+
 
 void
 LteEnbPhy::DoSetSrsConfigurationIndex (uint16_t  rnti, uint16_t srcCi)
@@ -1116,6 +1600,20 @@ LteEnbPhy::DoSetSystemInformationBlockType1 (LteRrcSap::SystemInformationBlockTy
 {
   NS_LOG_FUNCTION (this);
   m_sib1 = sib1;
+}
+
+void
+LteEnbPhy::DoSetMasterInformationBlockNb (NbLteRrcSap::MasterInformationBlockNb mibNb)	// Used by NB-IoT. 3GPP Release 13.
+{
+  NS_LOG_FUNCTION (this);
+  m_mibNb = mibNb;
+}
+
+void
+LteEnbPhy::DoSetSystemInformationBlockType1Nb (NbLteRrcSap::SystemInformationBlockType1Nb sib1Nb)  // Used by NB-IoT. 3GPP Release 13.
+{
+  NS_LOG_FUNCTION (this);
+  m_sib1Nb = sib1Nb;
 }
 
 

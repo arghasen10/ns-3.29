@@ -59,6 +59,7 @@
 #include "ns3/csma-module.h"
 #include <iostream>
 #include "ns3/global-route-manager.h"
+#include "ns3/mobility-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/vector.h"
 

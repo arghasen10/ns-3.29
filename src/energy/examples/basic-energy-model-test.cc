@@ -61,7 +61,7 @@ private:
    * Runs simulation for a while, check if final state & remaining energy is
    * correctly updated.
    */
-  bool StateSwitchTest (WifiPhyState state);
+  bool StateSwitchTest (WifiPhy::State state);
 
 private:
   double m_timeS;     // in seconds
@@ -88,52 +88,52 @@ BasicEnergyUpdateTest::DoRun (void)
   m_energySource.SetTypeId ("ns3::BasicEnergySource");
   m_deviceEnergyModel.SetTypeId ("ns3::WifiRadioEnergyModel");
 
+  uint8_t ret = 0;
+
   // run state switch tests
-  if (StateSwitchTest (WifiPhyState::IDLE))
+  if (StateSwitchTest (WifiPhy::IDLE))
     {
-      return 1;
+      ret = 1;
       std::cerr << "Problem with state switch test (WifiPhy idle)." << std::endl;
     }
-  if (StateSwitchTest (WifiPhyState::CCA_BUSY))
+  if (StateSwitchTest (WifiPhy::CCA_BUSY))
     {
-      return 1;
+      ret = 1;
       std::cerr << "Problem with state switch test (WifiPhy cca busy)." << std::endl;
     }
-  if (StateSwitchTest (WifiPhyState::TX))
+  if (StateSwitchTest (WifiPhy::TX))
     {
-      return 1;
+      ret = 1;
       std::cerr << "Problem with state switch test (WifiPhy tx)." << std::endl;
     }
-  if (StateSwitchTest (WifiPhyState::RX))
+  if (StateSwitchTest (WifiPhy::RX))
     {
-      return 1;
+      ret = 1;
       std::cerr << "Problem with state switch test (WifiPhy rx)." << std::endl;
     }
-  if (StateSwitchTest (WifiPhyState::SWITCHING))
+  if (StateSwitchTest (WifiPhy::SWITCHING))
     {
-      return 1;
+      ret = 1;
       std::cerr << "Problem with state switch test (WifiPhy switching)." << std::endl;
     }
-  if (StateSwitchTest (WifiPhyState::SLEEP))
+  if (StateSwitchTest (WifiPhy::SLEEP))
     {
-      return 1;
+      ret = 1;
       std::cerr << "Problem with state switch test (WifiPhy sleep)." << std::endl;
     }
-  return 0;
+  return ret;
 }
 
 bool
-BasicEnergyUpdateTest::StateSwitchTest (WifiPhyState state)
+BasicEnergyUpdateTest::StateSwitchTest (WifiPhy::State state)
 {
   // create node
   Ptr<Node> node = CreateObject<Node> ();
 
   // create energy source
   Ptr<BasicEnergySource> source = m_energySource.Create<BasicEnergySource> ();
-  source->SetInitialEnergy (50);
   // aggregate energy source to node
   node->AggregateObject (source);
-  source->SetNode (node);
 
   // create device energy model
   Ptr<WifiRadioEnergyModel> model =
@@ -172,7 +172,7 @@ BasicEnergyUpdateTest::StateSwitchTest (WifiPhyState state)
                        &WifiRadioEnergyModel::ChangeState, devModel, state);
 
   // Calculate remaining energy at simulation stop time
-  Simulator::Schedule (Seconds (m_timeS * 2),
+  Simulator::Schedule (Seconds (m_timeS * 2), 
                        &BasicEnergySource::UpdateEnergySource, source);
 
   double timeDelta = 0.000000001; // 1 nanosecond
@@ -187,37 +187,42 @@ BasicEnergyUpdateTest::StateSwitchTest (WifiPhyState state)
   double voltage = source->GetSupplyVoltage ();
   estRemainingEnergy -= devModel->GetIdleCurrentA () * voltage * m_timeS;
 
+  /*
+   * Manually calculate the number of periodic updates performed by the source.
+   * This is to check if the periodic updates are performed correctly.
+   */
+  double actualTime = m_timeS;
+  actualTime /= source->GetEnergyUpdateInterval ().GetSeconds ();
+  actualTime = floor (actualTime); // rounding for update interval
+  actualTime *= source->GetEnergyUpdateInterval ().GetSeconds ();
+
   // calculate new state power consumption
   double current = 0.0;
   switch (state)
     {
-    case WifiPhyState::IDLE:
+    case WifiPhy::IDLE:
       current = devModel->GetIdleCurrentA ();
       break;
-    case WifiPhyState::CCA_BUSY:
+    case WifiPhy::CCA_BUSY:
       current = devModel->GetCcaBusyCurrentA ();
       break;
-    case WifiPhyState::TX:
+    case WifiPhy::TX:
       current = devModel->GetTxCurrentA ();
       break;
-    case WifiPhyState::RX:
+    case WifiPhy::RX:
       current = devModel->GetRxCurrentA ();
       break;
-    case WifiPhyState::SWITCHING:
+    case WifiPhy::SWITCHING:
       current = devModel->GetSwitchingCurrentA ();
       break;
-    case WifiPhyState::SLEEP:
+    case WifiPhy::SLEEP:
       current = devModel->GetSleepCurrentA ();
-      break;
-    case WifiPhyState::OFF:
-      current = 0;
       break;
     default:
       NS_FATAL_ERROR ("Undefined radio state: " << state);
       break;
     }
   estRemainingEnergy -= current * voltage * m_timeS;
-  estRemainingEnergy = std::max (0.0, estRemainingEnergy);
 
   // obtain remaining energy from source
   double remainingEnergy = source->GetRemainingEnergy ();
@@ -226,15 +231,15 @@ BasicEnergyUpdateTest::StateSwitchTest (WifiPhyState state)
   NS_LOG_DEBUG ("Difference is " << estRemainingEnergy - remainingEnergy);
 
   // check remaining energy
-  if ((remainingEnergy > (estRemainingEnergy + m_tolerance))
-      || (remainingEnergy < (estRemainingEnergy - m_tolerance)))
+  if ((remainingEnergy > (estRemainingEnergy + m_tolerance)) ||
+      (remainingEnergy < (estRemainingEnergy - m_tolerance)))
     {
       std::cerr << "Incorrect remaining energy!" << std::endl;
       return true;
     }
 
   // obtain radio state
-  WifiPhyState endState = devModel->GetCurrentState ();
+  WifiPhy::State endState = devModel->GetCurrentState ();
   NS_LOG_DEBUG ("Radio state is " << endState);
   // check end state
   if (endState != state)
@@ -357,14 +362,14 @@ BasicEnergyDepletionTest::DepletionTestCase (double simTimeS,
   WifiHelper wifi;
   wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
 
-  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   /*
    * This is one parameter that matters when using FixedRssLossModel, set it to
    * zero; otherwise, gain will be added.
    */
   wifiPhy.Set ("RxGain", DoubleValue (0));
   // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
-  wifiPhy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
+  wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO);
 
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");

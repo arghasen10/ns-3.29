@@ -27,6 +27,8 @@
 #include "ns3/log.h"
 #include "ns3/pointer.h"
 #include "ns3/string.h"
+#include "ns3/log.h"
+
 #include "uan-channel.h"
 #include "uan-phy.h"
 #include "uan-prop-model.h"
@@ -124,14 +126,14 @@ UanChannel::SetPropagationModel (Ptr<UanPropModel> prop)
   m_prop = prop;
 }
 
-std::size_t
+uint32_t
 UanChannel::GetNDevices () const
 {
   return m_devList.size ();
 }
 
 Ptr<NetDevice>
-UanChannel::GetDevice (std::size_t i) const
+UanChannel::GetDevice (uint32_t i) const
 {
   return m_devList[i].first;
 }

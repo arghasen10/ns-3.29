@@ -52,7 +52,7 @@ type the command
   ./waf configure --enable-examples
 followed by
   ./waf 
-in the directory which contains
+in the the directory which contains
 this README file. The files built will be copied in the
 build/ directory.
 
@@ -102,16 +102,17 @@ This documentation includes:
     as introductory text:
     http://www.nsnam.org/doxygen/index.html
 
-5) Working with the development version of ns-3
+5) Working on MAC-OS for NB-IoT
 -----------------------------------------------
+hg clone http://code.nsnam.org/ns-3-allinone
 
-If you want to download and use the development version 
-of ns-3, you need to use the tool 'mercurial'. A quick and
-dirty cheat sheet is included in doc/mercurial.txt but
-reading through the mercurial tutorials included on the
-mercurial website is usually a good idea if you are not
-familiar with it.
+cd ns-3-allinone
 
-If you have successfully installed mercurial, you can get
-a copy of the development version with the following command:
-"hg clone http://code.nsnam.org/ns-3-dev"
+./download.py -n ns-3.29
+
+./waf configure --disable-werror --enable-examples --enable-tests --enable-modules=lte
+
+./waf
+
+6) Scratch file scratch/lena-simple-epc-1.cc is updated one
+

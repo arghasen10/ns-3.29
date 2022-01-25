@@ -36,10 +36,9 @@
 
 namespace ns3 {
 
-template <typename Item> class Queue;
+class Queue;
 class CsmaChannel;
 class ErrorModel;
-class NetDeviceQueueInterface;
 
 /** 
  * \defgroup csma CSMA Network Device
@@ -129,20 +128,20 @@ public:
    *
    * The CsmaNetDevice "owns" a queue.  This queue may be set by higher
    * level topology objects to implement a particular queueing method such as
-   * DropTail.
+   * DropTail or RED.
    *
    * \see Queue
    * \see DropTailQueue
    * \param queue a Ptr to the queue for being assigned to the device.
    */
-  void SetQueue (Ptr<Queue<Packet> > queue);
+  void SetQueue (Ptr<Queue> queue);
 
   /**
    * Get a copy of the attached Queue.
    *
    * \return a pointer to the queue.
    */
-  Ptr<Queue<Packet> > GetQueue (void) const;
+  Ptr<Queue> GetQueue (void) const; 
 
   /**
    * Attach a receive ErrorModel to the CsmaNetDevice.
@@ -269,7 +268,7 @@ public:
    * \param packet packet to send
    * \param dest layer 2 destination address
    * \param protocolNumber protocol number
-   * \return true if successful, false otherwise (drop, ...)
+   * \return true if successfull, false otherwise (drop, ...)
    */
   virtual bool Send (Ptr<Packet> packet, const Address& dest, 
                      uint16_t protocolNumber);
@@ -280,7 +279,7 @@ public:
    * \param source layer 2 source address
    * \param dest layer 2 destination address
    * \param protocolNumber protocol number
-   * \return true if successful, false otherwise (drop, ...)
+   * \return true if successfull, false otherwise (drop, ...)
    */
   virtual bool SendFrom (Ptr<Packet> packet, const Address& source, const Address& dest, 
                          uint16_t protocolNumber);
@@ -356,9 +355,6 @@ protected:
    * payload contained in this packet.
    */
   void AddHeader (Ptr<Packet> p, Mac48Address source, Mac48Address dest, uint16_t protocolNumber);
-
-  virtual void DoInitialize (void);
-  virtual void NotifyNewAggregate (void);
 
 private:
 
@@ -534,7 +530,7 @@ private:
    * \see class Queue
    * \see class DropTailQueue
    */
-  Ptr<Queue<Packet> > m_queue;
+  Ptr<Queue> m_queue;
 
   /**
    * Error model for receive packet events.  When active this model will be
@@ -686,11 +682,6 @@ private:
    * The Node to which this device is attached.
    */
   Ptr<Node> m_node;
-
-  /**
-   * NetDevice queue interface.
-   */
-  Ptr<NetDeviceQueueInterface> m_queueInterface;
 
   /**
    * The MAC address which has been assigned to this device.

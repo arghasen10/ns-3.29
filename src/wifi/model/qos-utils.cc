@@ -19,33 +19,38 @@
  *          Cecchi Niccolò <insa@igeek.it>
  */
 
-#include "ns3/socket.h"
 #include "qos-utils.h"
-#include "wifi-mac-header.h"
-#include "mgt-headers.h"
-#include "ctrl-headers.h"
+#include "ns3/socket.h"
 
 namespace ns3 {
 
 AcIndex
 QosUtilsMapTidToAc (uint8_t tid)
 {
-  NS_ASSERT_MSG (tid < 8, "Tid " << +tid << " out of range");
+  NS_ASSERT_MSG (tid < 8, "Tid " << (uint16_t) tid << " out of range");
   switch (tid)
     {
     case 0:
-    case 3:
       return AC_BE;
       break;
     case 1:
+      return AC_BK;
+      break;
     case 2:
       return AC_BK;
       break;
+    case 3:
+      return AC_BE;
+      break;
     case 4:
+      return AC_VI;
+      break;
     case 5:
       return AC_VI;
       break;
     case 6:
+      return AC_VO;
+      break;
     case 7:
       return AC_VO;
       break;

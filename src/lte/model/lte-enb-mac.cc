@@ -342,7 +342,7 @@ LteEnbMac::GetTypeId (void)
     .AddConstructor<LteEnbMac> ()
     .AddAttribute ("NumberOfRaPreambles",
                    "how many random access preambles are available for the contention based RACH process",
-                   UintegerValue (52),
+                   UintegerValue (50),
                    MakeUintegerAccessor (&LteEnbMac::m_numberOfRaPreambles),
                    MakeUintegerChecker<uint8_t> (4, 64))
     .AddAttribute ("PreambleTransMax",
@@ -548,7 +548,7 @@ LteEnbMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
 
               RachListElement_s rachLe;
               rachLe.m_rnti = rnti;
-              rachLe.m_estimatedSize = 144; // to be confirmed
+              rachLe.m_estimatedSize = 15;//15//55;//144; // to be confirmed
               rachInfoReqParams.m_rachList.push_back (rachLe);
               m_rapIdRntiMap.insert (std::pair <uint16_t, uint32_t> (rnti, it->first));
             }
@@ -557,34 +557,39 @@ LteEnbMac::DoSubframeIndication (uint32_t frameNo, uint32_t subframeNo)
       m_receivedRachPreambleCount.clear ();
     }
   // Get downlink transmission opportunities
-  uint32_t dlSchedFrameNo = m_frameNo;
-  uint32_t dlSchedSubframeNo = m_subframeNo;
-  //   NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
-  if (dlSchedSubframeNo + m_macChTtiDelay > 10)
-    {
-      dlSchedFrameNo++;
-      dlSchedSubframeNo = (dlSchedSubframeNo + m_macChTtiDelay) % 10;
-    }
-  else
-    {
-      dlSchedSubframeNo = dlSchedSubframeNo + m_macChTtiDelay;
-    }
-  FfMacSchedSapProvider::SchedDlTriggerReqParameters dlparams;
-  dlparams.m_sfnSf = ((0x3FF & dlSchedFrameNo) << 4) | (0xF & dlSchedSubframeNo);
+  if(true /*m_subframeNo % 2 != 0*/)
+  {
+    NS_LOG_FUNCTION (this << " Get downlink transmission opportunities ====================================================");
+    uint32_t dlSchedFrameNo = m_frameNo;
+    uint32_t dlSchedSubframeNo = m_subframeNo;
+    NS_LOG_DEBUG (this << " sfn " << frameNo << " sbfn " << subframeNo);
+    if (dlSchedSubframeNo + m_macChTtiDelay > 10)
+      {
+        dlSchedFrameNo++;
+        dlSchedSubframeNo = (dlSchedSubframeNo + m_macChTtiDelay) % 10;
+      }
+    else
+      {
+        dlSchedSubframeNo = dlSchedSubframeNo + m_macChTtiDelay;
+      }
+    FfMacSchedSapProvider::SchedDlTriggerReqParameters dlparams;
+    dlparams.m_sfnSf = ((0x3FF & dlSchedFrameNo) << 4) | (0xF & dlSchedSubframeNo);
 
-  // Forward DL HARQ feebacks collected during last TTI
-  if (m_dlInfoListReceived.size () > 0)
-    {
-      dlparams.m_dlInfoList = m_dlInfoListReceived;
-      // empty local buffer
-      m_dlInfoListReceived.clear ();
-    }
+    // Forward DL HARQ feebacks collected during last TTI
+    if (m_dlInfoListReceived.size () > 0)
+      {
+        dlparams.m_dlInfoList = m_dlInfoListReceived;
+        // empty local buffer
+        m_dlInfoListReceived.clear ();
+      }
 
-  m_schedSapProvider->SchedDlTriggerReq (dlparams);
+    m_schedSapProvider->SchedDlTriggerReq (dlparams);
+  }
 
-
+  NS_LOG_FUNCTION (this << " --- UPLINK ---  ====================================================");
   // --- UPLINK ---
   // Send UL-CQI info to the scheduler
+  std::vector <FfMacSchedSapProvider::SchedUlCqiInfoReqParameters>::iterator itCqi;
   for (uint16_t i = 0; i < m_ulCqiReceived.size (); i++)
     {
       if (subframeNo > 1)
@@ -808,7 +813,7 @@ LteEnbMac::DoAddUe (uint16_t rnti)
 
   m_cschedSapProvider->CschedUeConfigReq (params);
 
-  // Create DL transmission HARQ buffers
+  // Create DL trasmission HARQ buffers
   std::vector < Ptr<PacketBurst> > dlHarqLayer0pkt;
   dlHarqLayer0pkt.resize (8);
   for (uint8_t i = 0; i < 8; i++)

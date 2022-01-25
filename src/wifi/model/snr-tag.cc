@@ -22,8 +22,8 @@
  *          Konstantinos Katsaros <dinos.katsaros@gmail.com>
  */
 
-#include "ns3/double.h"
 #include "snr-tag.h"
+#include "ns3/double.h"
 
 namespace ns3 {
 
@@ -52,6 +52,11 @@ SnrTag::GetInstanceTypeId (void) const
 
 SnrTag::SnrTag ()
   : m_snr (0)
+{
+}
+
+SnrTag::SnrTag (double snr)
+  : m_snr (snr)
 {
 }
 

@@ -21,9 +21,8 @@
 #ifndef WIFI_PHY_TAG_H
 #define WIFI_PHY_TAG_H
 
-#include "ns3/tag.h"
-#include "wifi-mpdu-type.h"
-#include "wifi-tx-vector.h"
+#include <ns3/tag.h>
+#include "wifi-phy.h"
 
 namespace ns3 {
 
@@ -36,12 +35,8 @@ namespace ns3 {
 class WifiPhyTag : public Tag
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
-  TypeId GetInstanceTypeId (void) const;
+  virtual TypeId GetInstanceTypeId (void) const;
 
   /**
    * Constructor
@@ -50,10 +45,9 @@ public:
   /**
    * Constructor
    * \param txVector the WifiTxVector
-   * \param mpdutype the mpduType
-   * \param frameComplete the frameComplete
+   * \param mpduType the mpduType
    */
-  WifiPhyTag (WifiTxVector txVector, MpduType mpdutype, uint8_t frameComplete);
+  WifiPhyTag (WifiTxVector txVector, MpduType mpdutype);
   /**
    * Getter for WifiTxVector parameter
    * \return the WifiTxVector
@@ -64,23 +58,16 @@ public:
    * \return mpduType the mpduType
    */
   MpduType GetMpduType (void) const;
-  /**
-   * Getter for frameComplete parameter
-   * \return the frameComplete parameter, i.e. 0 if the frame is not complete, 1 otherwise.
-   */
-  uint8_t GetFrameComplete (void) const;
 
   // From class Tag
-  uint32_t GetSerializedSize (void) const;
-  void Serialize (TagBuffer i) const;
-  void Deserialize (TagBuffer i);
-  void Print (std::ostream &os) const;
-
+  virtual uint32_t GetSerializedSize (void) const;
+  virtual void Serialize (TagBuffer i) const;
+  virtual void Deserialize (TagBuffer i);
+  virtual void Print (std::ostream &os) const;
 
 private:
-  WifiTxVector m_wifiTxVector; ///< wifi transmit vector
-  MpduType m_mpduType; ///< MPDU type
-  uint8_t m_frameComplete; ///< Used to indicate that TX stopped sending before the end of the frame
+  WifiTxVector m_wifiTxVector;
+  MpduType m_mpduType;
 };
 
 } // namespace ns3

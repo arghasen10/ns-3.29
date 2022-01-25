@@ -16,8 +16,6 @@
  * Author: Josh Pelkey <jpelkey@gatech.edu>
  */
 
-// Define an object to create a grid topology.
-
 #ifndef POINT_TO_POINT_GRID_HELPER_H
 #define POINT_TO_POINT_GRID_HELPER_H
 
@@ -48,7 +46,7 @@ public:
    *
    * \param nRows total number of rows in the grid
    *
-   * \param nCols total number of columns in the grid
+   * \param nCols total number of colums in the grid
    *
    * \param pointToPoint the PointToPointHelper which is used 
    *                     to connect all of the nodes together 
@@ -119,7 +117,7 @@ public:
    *              to all of the row interfaces in the grid
    *
    * \param colIp the Ipv4AddressHelper used to assign Ipv4 addresses 
-   *              to all of the column interfaces in the grid
+   *              to all of the row interfaces in the grid
    */
   void AssignIpv4Addresses (Ipv4AddressHelper rowIp, Ipv4AddressHelper colIp);
 

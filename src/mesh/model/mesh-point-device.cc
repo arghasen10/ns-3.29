@@ -19,6 +19,7 @@
  *         Pavel Boyko <boyko@iitp.ru>
  */
 
+#include "ns3/node.h"
 #include "ns3/packet.h"
 #include "ns3/log.h"
 #include "ns3/pointer.h"
@@ -109,7 +110,6 @@ MeshPointDevice::ReceiveFromDevice (Ptr<NetDevice> incomingPort, Ptr<const Packe
       if (m_routingProtocol->RemoveRoutingStuff (incomingPort->GetIfIndex (), src48, dst48, packet_copy, realProtocol))
         {
           m_rxCallback (this, packet_copy, realProtocol, src);
-          NS_LOG_DEBUG ("Forwarding from " << src48 << " to " << dst48 << " at " << m_address);
           Forward (incomingPort, packet, protocol, src48, dst48);
 
           m_rxStats.broadcastData++;
@@ -136,15 +136,9 @@ void
 MeshPointDevice::Forward (Ptr<NetDevice> inport, Ptr<const Packet> packet, uint16_t protocol,
                           const Mac48Address src, const Mac48Address dst)
 {
-  NS_LOG_FUNCTION (this << inport << packet << protocol << src << dst);
   // pass through routing protocol
-  NS_LOG_DEBUG ("Forwarding from " << src << " to " << dst << " at " << m_address);
-  bool result = m_routingProtocol->RequestRoute (inport->GetIfIndex (), src, dst, packet, protocol, MakeCallback (
+  m_routingProtocol->RequestRoute (inport->GetIfIndex (), src, dst, packet, protocol, MakeCallback (
                                      &MeshPointDevice::DoSend, this));
-  if (result == false)
-    {
-      NS_LOG_DEBUG ("Request to forward packet " << packet << " to destination " << dst << " failed; dropping packet");
-    }
 }
 
 void

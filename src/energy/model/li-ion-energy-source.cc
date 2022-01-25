@@ -116,6 +116,8 @@ LiIonEnergySource::LiIonEnergySource ()
     m_lastUpdateTime (Seconds (0.0))
 {
   NS_LOG_FUNCTION (this);
+  m_initialEnergyJ      = 18000.000;   // 5Wh battery
+  m_remainingEnergyJ    = 18000.000;
 }
 
 LiIonEnergySource::~LiIonEnergySource ()
@@ -193,12 +195,13 @@ LiIonEnergySource::DecreaseRemainingEnergy (double energyJ)
   NS_LOG_FUNCTION (this << energyJ);
   NS_ASSERT (energyJ >= 0);
   m_remainingEnergyJ -= energyJ;
+  std::cout<<Simulator::Now().GetSeconds()<<" "<<energyJ <<" Remaining energy in joules " << (double)m_remainingEnergyJ <<" EnergyConsumed " <<(double)(m_initialEnergyJ - m_remainingEnergyJ)<<std::endl;
 
   // check if remaining energy is 0
-  if (m_supplyVoltageV <= m_minVoltTh)
-    {
-      HandleEnergyDrainedEvent ();
-    }
+  //if (m_supplyVoltageV <= m_minVoltTh)
+  //  {
+  //    HandleEnergyDrainedEvent ();
+  //  }
 }
 
 void

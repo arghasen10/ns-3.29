@@ -145,10 +145,7 @@ void
 NullMessageMpiInterface::Enable (int* pargc, char*** pargv)
 {
   NS_LOG_FUNCTION (this << *pargc);
-
-#ifndef NS3_MPI
-  NS_UNUSED(pargv);
-#else
+#ifdef NS3_MPI
 
   // Initialize the MPI interface
   MPI_Init (pargc, pargv);

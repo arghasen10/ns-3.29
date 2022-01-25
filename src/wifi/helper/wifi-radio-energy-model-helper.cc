@@ -21,7 +21,6 @@
 #include "wifi-radio-energy-model-helper.h"
 #include "ns3/wifi-net-device.h"
 #include "ns3/wifi-tx-current-model.h"
-#include "ns3/wifi-phy.h"
 
 namespace ns3 {
 
@@ -100,25 +99,25 @@ WifiRadioEnergyModelHelper::DoInstall (Ptr<NetDevice> device,
   Ptr<Node> node = device->GetNode ();
   Ptr<WifiRadioEnergyModel> model = m_radioEnergy.Create ()->GetObject<WifiRadioEnergyModel> ();
   NS_ASSERT (model != NULL);
-
+  // set energy source pointer
+  model->SetEnergySource (source);
   // set energy depletion callback
-  // if none is specified, make a callback to WifiPhy::SetOffMode
+  // if none is specified, make a callback to WifiPhy::SetSleepMode
   Ptr<WifiNetDevice> wifiDevice = DynamicCast<WifiNetDevice> (device);
   Ptr<WifiPhy> wifiPhy = wifiDevice->GetPhy ();
-  wifiPhy->SetWifiRadioEnergyModel (model);
   if (m_depletionCallback.IsNull ())
     {
-      model->SetEnergyDepletionCallback (MakeCallback (&WifiPhy::SetOffMode, wifiPhy));
+      model->SetEnergyDepletionCallback (MakeCallback (&WifiPhy::SetSleepMode, wifiPhy));
     }
   else
     {
       model->SetEnergyDepletionCallback (m_depletionCallback);
     }
   // set energy recharged callback
-  // if none is specified, make a callback to WifiPhy::ResumeFromOff
+  // if none is specified, make a callback to WifiPhy::ResumeFromSleep
   if (m_rechargedCallback.IsNull ())
     {
-      model->SetEnergyRechargedCallback (MakeCallback (&WifiPhy::ResumeFromOff, wifiPhy));
+      model->SetEnergyRechargedCallback (MakeCallback (&WifiPhy::ResumeFromSleep, wifiPhy));
     }
   else
     {
@@ -126,8 +125,6 @@ WifiRadioEnergyModelHelper::DoInstall (Ptr<NetDevice> device,
     }
   // add model to device model list in energy source
   source->AppendDeviceEnergyModel (model);
-  // set energy source pointer
-  model->SetEnergySource (source);
   // create and register energy model phy listener
   wifiPhy->RegisterListener (model->GetPhyListener ());
   //

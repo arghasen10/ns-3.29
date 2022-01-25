@@ -19,10 +19,10 @@
  *          Sébastien Deronne <sebastien.deronne@gmail.com>
  */
 
-#include <cmath>
-#include "ns3/log.h"
 #include "wifi-mode.h"
 #include "wifi-tx-vector.h"
+#include "ns3/log.h"
+#include <cmath>
 
 namespace ns3 {
 
@@ -38,19 +38,6 @@ namespace ns3 {
 bool operator == (const WifiMode &a, const WifiMode &b)
 {
   return a.GetUid () == b.GetUid ();
-}
-/**
- * Compare two WifiModes
- *
- * \param a WifiMode
- * \param b WifiMode
- *
- * \return true if a is less than b,
- *         false otherwise
- */
-bool operator < (const WifiMode &a, const WifiMode &b)
-{
-  return a.GetUid () < b.GetUid ();
 }
 /**
  * Serialize WifiMode to ostream (human-readable).
@@ -82,7 +69,7 @@ std::istream & operator >> (std::istream &is, WifiMode &mode)
 }
 
 bool
-WifiMode::IsAllowed (uint16_t channelWidth, uint8_t nss) const
+WifiMode::IsAllowed (uint8_t channelWidth, uint8_t nss) const
 {
   WifiModeFactory::WifiModeItem *item = WifiModeFactory::GetFactory ()->Get (m_uid);
   if (item->modClass == WIFI_MOD_CLASS_VHT)
@@ -106,7 +93,7 @@ WifiMode::IsAllowed (uint16_t channelWidth, uint8_t nss) const
 }
 
 uint64_t
-WifiMode::GetPhyRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss) const
+WifiMode::GetPhyRate (uint8_t channelWidth, uint16_t guardInterval, uint8_t nss) const
 {
   //TODO: nss > 4 not supported yet
   NS_ASSERT (nss <= 4);
@@ -141,7 +128,7 @@ WifiMode::GetPhyRate (WifiTxVector txVector) const
 }
 
 uint64_t
-WifiMode::GetDataRate (uint16_t channelWidth) const
+WifiMode::GetDataRate (uint8_t channelWidth) const
 {
   return GetDataRate (channelWidth, 800, 1);
 }
@@ -153,7 +140,7 @@ WifiMode::GetDataRate (WifiTxVector txVector) const
 }
 
 uint64_t
-WifiMode::GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t nss) const
+WifiMode::GetDataRate (uint8_t channelWidth, uint16_t guardInterval, uint8_t nss) const
 {
   //TODO: nss > 4 not supported yet
   NS_ASSERT (nss <= 4);
@@ -162,7 +149,7 @@ WifiMode::GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t ns
   uint16_t usableSubCarriers = 0;
   double symbolRate = 0;
   double codingRate = 0;
-  uint16_t numberOfBitsPerSubcarrier = static_cast<uint16_t> (log2 (GetConstellationSize ()));
+  uint32_t numberOfBitsPerSubcarrier = log2 (GetConstellationSize ());
   if (item->modClass == WIFI_MOD_CLASS_DSSS)
     {
       dataRate = ((11000000 / 11) * numberOfBitsPerSubcarrier);
@@ -211,11 +198,11 @@ WifiMode::GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t ns
     {
       if (item->modClass == WIFI_MOD_CLASS_VHT)
         {
-          NS_ASSERT_MSG (IsAllowed (channelWidth, nss), "VHT MCS " << +item->mcsValue << " forbidden at " << channelWidth << " MHz when NSS is " << +nss);
+          NS_ASSERT_MSG (IsAllowed (channelWidth, nss), "VHT MCS " << (uint16_t)item->mcsValue << " forbidden at " << (uint16_t)channelWidth << " MHz when NSS is " << (uint16_t)nss);
         }
 
       NS_ASSERT (guardInterval == 800 || guardInterval == 400);
-      symbolRate = (1 / (3.2 + (static_cast<double> (guardInterval) / 1000))) * 1e6;
+      symbolRate = (1 / (3.2 + ((double)guardInterval / 1000))) * 1e6;
 
       if (item->modClass == WIFI_MOD_CLASS_HT)
         {
@@ -268,7 +255,7 @@ WifiMode::GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t ns
           break;
         case WIFI_CODE_RATE_UNDEFINED:
         default:
-          NS_FATAL_ERROR ("trying to get datarate for a mcs without any coding rate defined with nss: " << +nss);
+          NS_FATAL_ERROR ("trying to get datarate for a mcs without any coding rate defined with nss: " << (uint16_t) nss);
           break;
         }
 
@@ -276,8 +263,10 @@ WifiMode::GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t ns
     }
   else if (item->modClass == WIFI_MOD_CLASS_HE)
     {
+      //todo: check forbidden combinations
+
       NS_ASSERT (guardInterval == 800 || guardInterval == 1600 || guardInterval == 3200);
-      symbolRate = (1 / (12.8 + (static_cast<double> (guardInterval) / 1000))) * 1e6;
+      symbolRate = (1 / (12.8 + ((double)guardInterval / 1000))) * 1e6;
 
       switch (channelWidth)
         {
@@ -312,7 +301,7 @@ WifiMode::GetDataRate (uint16_t channelWidth, uint16_t guardInterval, uint8_t ns
           break;
         case WIFI_CODE_RATE_UNDEFINED:
         default:
-          NS_FATAL_ERROR ("trying to get datarate for a mcs without any coding rate defined with nss: " << +nss);
+          NS_FATAL_ERROR ("trying to get datarate for a mcs without any coding rate defined with nss: " << (uint16_t) nss);
           break;
         }
 
@@ -721,7 +710,7 @@ WifiModeFactory::CreateWifiMode (std::string uniqueName,
   item->constellationSize = constellationSize;
   item->isMandatory = isMandatory;
 
-  NS_ASSERT (modClass != WIFI_MOD_CLASS_HT && modClass != WIFI_MOD_CLASS_VHT && modClass != WIFI_MOD_CLASS_HE);
+  NS_ASSERT (modClass != WIFI_MOD_CLASS_HT && modClass != WIFI_MOD_CLASS_VHT);
   //fill unused mcs item with a dummy value
   item->mcsValue = 0;
 
@@ -799,7 +788,7 @@ WifiModeFactory::AllocateUid (std::string uniqueUid)
         }
       j++;
     }
-  uint32_t uid = static_cast<uint32_t> (m_itemList.size ());
+  uint32_t uid = m_itemList.size ();
   m_itemList.push_back (WifiModeItem ());
   return uid;
 }

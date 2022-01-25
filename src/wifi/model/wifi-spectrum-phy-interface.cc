@@ -18,10 +18,8 @@
  * Author: Nicola Baldo <nbaldo@cttc.es>
  */
 
-#include "ns3/log.h"
-#include "ns3/spectrum-value.h"
-#include "ns3/mobility-model.h"
-#include "ns3/net-device.h"
+#include <ns3/log.h>
+#include <ns3/spectrum-value.h>
 #include "wifi-spectrum-phy-interface.h"
 #include "spectrum-wifi-phy.h"
 
@@ -54,7 +52,7 @@ WifiSpectrumPhyInterface::DoDispose (void)
   m_channel = 0;
 }
 
-void WifiSpectrumPhyInterface::SetSpectrumWifiPhy (const Ptr<SpectrumWifiPhy> spectrumWifiPhy)
+void WifiSpectrumPhyInterface::SetSpectrumWifiPhy (Ptr<SpectrumWifiPhy> spectrumWifiPhy)
 {
   m_spectrumWifiPhy = spectrumWifiPhy;
 }
@@ -72,19 +70,19 @@ WifiSpectrumPhyInterface::GetMobility ()
 }
 
 void
-WifiSpectrumPhyInterface::SetDevice (const Ptr<NetDevice> d)
+WifiSpectrumPhyInterface::SetDevice (Ptr<NetDevice> d)
 {
   m_netDevice = d;
 }
 
 void
-WifiSpectrumPhyInterface::SetMobility (const Ptr<MobilityModel> m)
+WifiSpectrumPhyInterface::SetMobility (Ptr<MobilityModel> m)
 {
   m_spectrumWifiPhy->SetMobility (m);
 }
 
 void
-WifiSpectrumPhyInterface::SetChannel (const Ptr<SpectrumChannel> c)
+WifiSpectrumPhyInterface::SetChannel (Ptr<SpectrumChannel> c)
 {
   NS_LOG_FUNCTION (this << c);
   m_channel = c;

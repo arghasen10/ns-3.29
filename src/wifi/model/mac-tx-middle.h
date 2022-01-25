@@ -24,19 +24,18 @@
 #define MAC_TX_MIDDLE_H
 
 #include <map>
-#include "ns3/simple-ref-count.h"
+#include "ns3/mac48-address.h"
 
 namespace ns3 {
 
 class WifiMacHeader;
-class Mac48Address;
 
 /**
  * \ingroup wifi
  *
  * Handles sequence numbering of IEEE 802.11 data frames
  */
-class MacTxMiddle : public SimpleRefCount<MacTxMiddle>
+class MacTxMiddle
 {
 public:
   MacTxMiddle ();
@@ -68,8 +67,8 @@ public:
 
 
 private:
-  std::map <Mac48Address,uint16_t*> m_qosSequences; ///< QOS sequences
-  uint16_t m_sequence; ///< current sequence number
+  std::map <Mac48Address,uint16_t*> m_qosSequences;
+  uint16_t m_sequence;
 };
 
 } //namespace ns3

@@ -30,9 +30,7 @@
 namespace ns3 {
 namespace olsr {
 /**
- * \ingroup olsr-test
- * \ingroup tests
- *
+ * \ingroup olsr
  * \brief Trivial (still useful) test of OLSR operation
  *
  * This test creates 2 stations with point-to-point link and runs OLSR without any extra traffic.
@@ -59,21 +57,16 @@ private:
   const Time m_time;
   /// Create & configure test network
   void CreateNodes ();
+  /// Go
   void DoRun ();
 
-  /**
-   * Receive raw data on node A
-   * \param socket receiving socket
-   */
+  /// Receive raw data on node A
   void ReceivePktProbeA (Ptr<Socket> socket);
   /// Packet counter on node A
   uint8_t m_countA;
   /// Receiving socket on node A
   Ptr<Ipv4RawSocketImpl> m_rxSocketA;
-  /**
-   * Receive raw data on node B
-   * \param socket receiving socket
-   */
+  /// Receive raw data on node B
   void ReceivePktProbeB (Ptr<Socket> socket);
   /// Packet counter on node B
   uint8_t m_countB;

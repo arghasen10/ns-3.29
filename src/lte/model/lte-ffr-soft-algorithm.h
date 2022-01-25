@@ -57,9 +57,8 @@ public:
   virtual void SetLteFfrRrcSapUser (LteFfrRrcSapUser* s);
   virtual LteFfrRrcSapProvider* GetLteFfrRrcSapProvider ();
 
-  /// let the forwarder class access the protected and private members
+  // let the forwarder class access the protected and private members
   friend class MemberLteFfrSapProvider<LteFfrSoftAlgorithm>;
-  /// let the forwarder class access the protected and private members
   friend class MemberLteFfrRrcSapProvider<LteFfrSoftAlgorithm>;
 
 protected:
@@ -110,34 +109,33 @@ private:
 
 
   // FFR SAP
-  LteFfrSapUser* m_ffrSapUser; ///< FFR SAP user
-  LteFfrSapProvider* m_ffrSapProvider; ///< FFR SAP provider
+  LteFfrSapUser* m_ffrSapUser;
+  LteFfrSapProvider* m_ffrSapProvider;
 
   // FFR RRF SAP
-  LteFfrRrcSapUser* m_ffrRrcSapUser; ///< FFR RRC SAP user
-  LteFfrRrcSapProvider* m_ffrRrcSapProvider; ///< FFR RRC SAP provider
+  LteFfrRrcSapUser* m_ffrRrcSapUser;
+  LteFfrRrcSapProvider* m_ffrRrcSapProvider;
 
   uint8_t m_dlCommonSubBandwidth; ///< DL common subbandwidth
   uint8_t m_dlEdgeSubBandOffset; ///< DL edge subband offset
   uint8_t m_dlEdgeSubBandwidth; ///< DL edge subbandwidth
  
-  uint8_t m_ulCommonSubBandwidth; ///< UL common subbandwidth
+  uint8_t m_ulCommonSubBandwidth; ///< UL commmon subbandwidth
   uint8_t m_ulEdgeSubBandOffset; ///< UL edge subband offset
   uint8_t m_ulEdgeSubBandwidth; ///< UL edge subbandwidth
 
-  std::vector <bool> m_dlRbgMap; ///< DL RBG Map
-  std::vector <bool> m_ulRbgMap; ///< UL RBG map
+  std::vector <bool> m_dlRbgMap;
+  std::vector <bool> m_ulRbgMap;
 
-  std::vector <bool> m_dlCenterRbgMap; ///< DL center RBG map
-  std::vector <bool> m_ulCenterRbgMap; ///< UL center RBG map
+  std::vector <bool> m_dlCenterRbgMap;
+  std::vector <bool> m_ulCenterRbgMap;
 
-  std::vector <bool> m_dlMediumRbgMap; ///< DL medium RBG map
-  std::vector <bool> m_ulMediumRbgMap; ///< UL medium RBG map
+  std::vector <bool> m_dlMediumRbgMap;
+  std::vector <bool> m_ulMediumRbgMap;
 
-  std::vector <bool> m_dlEdgeRbgMap; ///< DL edge RBG map
-  std::vector <bool> m_ulEdgeRbgMap; ///< UL edge RBG map
+  std::vector <bool> m_dlEdgeRbgMap;
+  std::vector <bool> m_ulEdgeRbgMap;
 
-  /// UE position enumeration
   enum UePosition
   {
     AreaUnset,
@@ -146,7 +144,7 @@ private:
     EdgeArea
   };
 
-  std::map< uint16_t, uint8_t > m_ues; ///< UEs
+  std::map< uint16_t, uint8_t > m_ues;
 
   uint8_t m_centerSubBandThreshold; ///< center subband threshold
   uint8_t m_edgeSubBandThreshold; ///< edge subband threshold
@@ -159,7 +157,7 @@ private:
   uint8_t m_mediumAreaTpc; ///< medium area tpc
   uint8_t m_edgeAreaTpc; ///< edge area tpc
 
-  /// The expected measurement identity
+  // The expected measurement identity
   uint8_t m_measId;
 
 }; // end of class LteFfrSoftAlgorithm

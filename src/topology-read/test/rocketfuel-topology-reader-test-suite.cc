@@ -28,6 +28,7 @@
 #include "ns3/abort.h"
 #include "ns3/attribute.h"
 #include "ns3/object-factory.h"
+#include "ns3/object-factory.h"
 #include "ns3/simulator.h"
 
 using namespace ns3;

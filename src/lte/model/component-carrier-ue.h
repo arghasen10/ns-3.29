@@ -40,10 +40,6 @@ class LteUeMac;
 class ComponentCarrierUe : public ComponentCarrier
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
 
   ComponentCarrierUe ();
@@ -57,9 +53,6 @@ public:
    */
   Ptr<LteUePhy> GetPhy (void) const;
 
-  /**
-   * \return a pointer to the MAC layer.
-   */
   Ptr<LteUeMac> GetMac (void) const;
 
   /**
@@ -70,7 +63,7 @@ public:
 
   /**
    * Set the LteEnbMac
-   * \param s a pointer to the LteEnbMac
+   * \ param s a pointer to the LteEnbMac
    */ 
   void SetMac (Ptr<LteUeMac> s);
   
@@ -80,8 +73,8 @@ protected:
 
 private:
 
-  Ptr<LteUePhy> m_phy; ///< the Phy instance of this eNodeB component carrier
-  Ptr<LteUeMac> m_mac; ///< the MAC instance of this eNodeB component carrier
+  Ptr<LteUePhy> m_phy;
+  Ptr<LteUeMac> m_mac;
 
 };
 

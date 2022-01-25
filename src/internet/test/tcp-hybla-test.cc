@@ -81,7 +81,6 @@ TcpHyblaIncrementTest::TcpHyblaIncrementTest (uint32_t cWnd, uint32_t ssThresh,
 void
 TcpHyblaIncrementTest::RhoUpdated (double oldVal, double newVal)
 {
-  NS_UNUSED (oldVal);
   m_rho = newVal;
 }
 
@@ -93,7 +92,6 @@ TcpHyblaIncrementTest::DoRun ()
   m_state->m_cWnd = m_cWnd;
   m_state->m_ssThresh = m_ssThresh;
   m_state->m_segmentSize = m_segmentSize;
-  m_state->m_minRtt = m_rtt;
 
   Ptr<TcpHybla> cong = CreateObject <TcpHybla> ();
 
@@ -109,7 +107,7 @@ TcpHyblaIncrementTest::DoRun ()
 
   double calcRho = std::max (m_rtt.GetSeconds () / rRtt.Get ().GetSeconds (), 1.0);
 
-  NS_TEST_ASSERT_MSG_NE (m_rho, 0.0,
+  NS_TEST_ASSERT_MSG_NE (m_rho, 0,
                          "Rho never updated by implementation");
   NS_TEST_ASSERT_MSG_EQ_TOL (calcRho, m_rho, MilliSeconds (10),
                          "Different rho values between implementation and test");

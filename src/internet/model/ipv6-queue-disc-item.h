@@ -20,7 +20,10 @@
 #define IPV6_QUEUE_DISC_ITEM_H
 
 #include "ns3/packet.h"
-#include "ns3/queue-item.h"
+#include "ns3/object.h"
+#include "ns3/net-device.h"
+#include "ns3/traced-value.h"
+#include "ns3/queue-disc.h"
 #include "ipv6-header.h"
 
 namespace ns3 {
@@ -49,7 +52,7 @@ public:
   /**
    * \return the correct packet size (header plus payload).
    */
-  virtual uint32_t GetSize (void) const;
+  virtual uint32_t GetPacketSize (void) const;
 
   /**
    * \return the header stored in this item..
@@ -81,18 +84,6 @@ public:
    * \return true if the packet gets marked, false otherwise
    */
   virtual bool Mark (void);
-
-  /**
-   * \brief Computes the hash of the packet's 5-tuple
-   *
-   * Computes the hash of the source and destination IP addresses, protocol
-   * number and, if the transport protocol is either UDP or TCP, the source
-   * and destination port
-   *
-   * \param perturbation hash perturbation value
-   * \return the hash of the packet's 5-tuple
-   */
-  virtual uint32_t Hash (uint32_t perturbation) const;
 
 private:
   /**

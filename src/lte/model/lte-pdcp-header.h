@@ -73,8 +73,7 @@ public:
    */
   uint16_t GetSequenceNumber () const;
 
-  /// DcBit_t typedef
-  enum {
+  typedef enum {
     CONTROL_PDU   = 0,
     DATA_PDU      = 1
   } DcBit_t; ///< DcBit_t typedef 

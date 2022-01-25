@@ -20,12 +20,8 @@
  *          Mirko Banchi <mk.banchi@gmail.com>
  */
 
-#include "ns3/log.h"
-#include "ns3/packet.h"
 #include "adhoc-wifi-mac.h"
-#include "ht-capabilities.h"
-#include "vht-capabilities.h"
-#include "he-capabilities.h"
+#include "ns3/log.h"
 #include "mac-low.h"
 
 namespace ns3 {
@@ -79,21 +75,14 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
     {
       //In ad hoc mode, we assume that every destination supports all
       //the rates we support.
-      if (GetHtSupported () || GetVhtSupported () || GetHeSupported ())
+      if (m_htSupported || m_vhtSupported)
         {
           m_stationManager->AddAllSupportedMcs (to);
+          m_stationManager->AddStationHtCapabilities (to, GetHtCapabilities());
         }
-      if (GetHtSupported ())
+      if (m_vhtSupported)
         {
-          m_stationManager->AddStationHtCapabilities (to, GetHtCapabilities ());
-        }
-      if (GetVhtSupported ())
-        {
-          m_stationManager->AddStationVhtCapabilities (to, GetVhtCapabilities ());
-        }
-      if (GetHeSupported ())
-        {
-          m_stationManager->AddStationHeCapabilities (to, GetHeCapabilities ());
+          m_stationManager->AddStationVhtCapabilities (to, GetVhtCapabilities());
         }
       m_stationManager->AddAllSupportedModes (to);
       m_stationManager->RecordDisassociated (to);
@@ -111,7 +100,7 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
   //back to non-QoS if talking to a peer that is also non-QoS. At
   //that point there will need to be per-station QoS state maintained
   //by the association state machine, and consulted here.
-  if (GetQosSupported ())
+  if (m_qosSupported)
     {
       hdr.SetType (WIFI_MAC_QOSDATA);
       hdr.SetQosAckPolicy (WifiMacHeader::NORMAL_ACK);
@@ -134,12 +123,12 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
     }
   else
     {
-      hdr.SetType (WIFI_MAC_DATA);
+      hdr.SetTypeData ();
     }
 
-  if (GetHtSupported () || GetVhtSupported () || GetHeSupported ())
+  if (m_htSupported || m_vhtSupported)
     {
-      hdr.SetNoOrder (); // explicitly set to 0 for the time being since HT/VHT/HE control field is not yet implemented (set it to 1 when implemented)
+      hdr.SetNoOrder ();
     }
   hdr.SetAddr1 (to);
   hdr.SetAddr2 (m_low->GetAddress ());
@@ -147,7 +136,7 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
 
-  if (GetQosSupported ())
+  if (m_qosSupported)
     {
       //Sanity check that the TID is valid
       NS_ASSERT (tid < 8);
@@ -155,7 +144,7 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
     }
   else
     {
-      m_txop->Queue (packet, hdr);
+      m_dca->Queue (packet, hdr);
     }
 }
 
@@ -182,22 +171,14 @@ AdhocWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
     {
       //In ad hoc mode, we assume that every destination supports all
       //the rates we support.
-      if (GetHtSupported () || GetVhtSupported () || GetHeSupported ())
+      if (m_htSupported || m_vhtSupported)
         {
           m_stationManager->AddAllSupportedMcs (from);
-          m_stationManager->AddStationHtCapabilities (from, GetHtCapabilities ());
+          m_stationManager->AddStationHtCapabilities (from, GetHtCapabilities());
         }
-      if (GetHtSupported ())
+      if (m_vhtSupported)
         {
-          m_stationManager->AddStationHtCapabilities (from, GetHtCapabilities ());
-        }
-      if (GetVhtSupported ())
-        {
-          m_stationManager->AddStationVhtCapabilities (from, GetVhtCapabilities ());
-        }
-      if (GetHeSupported ())
-        {
-          m_stationManager->AddStationHeCapabilities (from, GetHeCapabilities ());
+          m_stationManager->AddStationVhtCapabilities (from, GetVhtCapabilities());
         }
       m_stationManager->AddAllSupportedModes (from);
       m_stationManager->RecordDisassociated (from);

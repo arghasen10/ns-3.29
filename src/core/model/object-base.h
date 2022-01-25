@@ -28,8 +28,7 @@
 /**
  * \file
  * \ingroup object
- * ns3::ObjectBase declaration and
- * NS_OBJECT_ENSURE_REGISTERED() madro definition.
+ * ns3::ObjectBase class declaration and NS_OBJECT_ENSURE_REGISTERED() definition.
  */
 
 /**
@@ -52,57 +51,7 @@
     }                                                   \
   } Object ## type ## RegistrationVariable
 
-
-/**
- * \ingroup object
- * \brief Explicitly instantiate a template class and register the resulting
- *        instance with the TypeId system.
- *
- * This macro should be invoked once for every required instance of a template
- * class which derives from the Object class and defines a new GetTypeId method.
- *
- * If the template class is in a namespace, then the macro call should also be
- * in the namespace.
- */
-#define NS_OBJECT_TEMPLATE_CLASS_DEFINE(type,param)                    \
-  template class type<param>;                                          \
-  template <> std::string DoGetTypeParamName<type<param> > ()          \
-  {                                                                    \
-    return #param;                                                     \
-  }                                                                    \
-  static struct Object ## type ## param ## RegistrationClass           \
-  {                                                                    \
-    Object ## type ## param ## RegistrationClass () {                  \
-      ns3::TypeId tid = type<param>::GetTypeId ();                     \
-      tid.SetSize (sizeof (type<param>));                              \
-      tid.GetParent ();                                                \
-    }                                                                  \
-  } Object ## type ## param ## RegistrationVariable
-
-
 namespace ns3 {
-
-/**
- * \brief Helper function to get the name (as a string) of the type parameter
- *        of a template class
- * \return the name of the type parameter as a string
- *
- * A specialization of this function is defined by the
- * NS_OBJECT_TEMPLATE_CLASS_DEFINE macro.
- */
-template <typename T>
-std::string DoGetTypeParamName (void);
-
-/**
- * \brief Helper function to get the name (as a string) of the type parameter
- *        of a template class
- * \return the name of the type parameter as a string
- */
-template <typename T>
-std::string GetTypeParamName (void)
-{
-  return DoGetTypeParamName<T> ();
-}
 
 class AttributeConstructionList;
 
@@ -121,7 +70,6 @@ class ObjectBase
 public:
   /**
    * Get the type ID.
-   * \return The object TypeId.
    */
   static TypeId GetTypeId (void);
 
@@ -160,7 +108,7 @@ public:
   /**
    * Set a single attribute without raising errors.
    *
-   * If the attribute could not be set this will return \c false,
+   * If the atttribute could not be set this will return \c false,
    * but not raise any errors.
    *
    * \param [in] name The name of the attribute to set.
@@ -187,7 +135,7 @@ public:
   /**
    * Get the value of an attribute without raising erros.
    *
-   * If the attribute could not be read this will return \c false,
+   * If the atttribute could not be read this will return \c false,
    * but not raise any errors.
    *
    * \param [in]  name The name of the attribute to read.

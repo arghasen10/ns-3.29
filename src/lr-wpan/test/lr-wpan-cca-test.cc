@@ -35,6 +35,8 @@
 
 using namespace ns3;
 
+using namespace ns3;
+
 NS_LOG_COMPONENT_DEFINE ("lr-wpan-clear-channel-assessment-test");
 
 /**

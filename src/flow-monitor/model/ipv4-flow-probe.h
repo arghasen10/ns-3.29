@@ -24,7 +24,6 @@
 #include "ns3/flow-probe.h"
 #include "ns3/ipv4-flow-classifier.h"
 #include "ns3/ipv4-l3-protocol.h"
-#include "ns3/queue-item.h"
 
 namespace ns3 {
 
@@ -113,8 +112,8 @@ private:
   /// \param ipPayload IP payload
   void QueueDropLogger (Ptr<const Packet> ipPayload);
   /// Log a packet being dropped by a queue disc
-  /// \param item queue disc item
-  void QueueDiscDropLogger (Ptr<const QueueDiscItem> item);
+  /// \param item queue item
+  void QueueDiscDropLogger (Ptr<const QueueItem> item);
 
   Ptr<Ipv4FlowClassifier> m_classifier; //!< the Ipv4FlowClassifier this probe is associated with
   Ptr<Ipv4L3Protocol> m_ipv4; //!< the Ipv4L3Protocol this probe is bound to

@@ -49,10 +49,7 @@ public:
 
   virtual ~LteFrNoOpAlgorithm ();
 
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
+  // inherited from Object
   static TypeId GetTypeId ();
 
   // inherited from LteFfrAlgorithm
@@ -62,9 +59,8 @@ public:
   virtual void SetLteFfrRrcSapUser (LteFfrRrcSapUser* s);
   virtual LteFfrRrcSapProvider* GetLteFfrRrcSapProvider ();
 
-  /// let the forwarder class access the protected and private members
+  // let the forwarder class access the protected and private members
   friend class MemberLteFfrSapProvider<LteFrNoOpAlgorithm>;
-  /// let the forwarder class access the protected and private members
   friend class MemberLteFfrRrcSapProvider<LteFrNoOpAlgorithm>;
 
 protected:
@@ -91,12 +87,12 @@ protected:
 
 private:
   // FFR SAP
-  LteFfrSapUser* m_ffrSapUser; ///< FFR SAP user
-  LteFfrSapProvider* m_ffrSapProvider; ///< FFR SAP provider
+  LteFfrSapUser* m_ffrSapUser;
+  LteFfrSapProvider* m_ffrSapProvider;
 
   // FFR RRF SAP
-  LteFfrRrcSapUser* m_ffrRrcSapUser; ///< FFR RRC SAP user
-  LteFfrRrcSapProvider* m_ffrRrcSapProvider; ///< FFR RRC SAP provider
+  LteFfrRrcSapUser* m_ffrRrcSapUser;
+  LteFfrRrcSapProvider* m_ffrRrcSapProvider;
 
 }; // end of class LteFrNoOpAlgorithm
 

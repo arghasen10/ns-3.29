@@ -25,27 +25,11 @@
 
 using namespace ns3;
 
-/**
- * \ingroup network
- * \defgroup network-test Network module unit tests
- */
-
-/**
- * \ingroup network-test
- * \ingroup tests
- *
- * Buffer unit tests.
- */
+//-----------------------------------------------------------------------------
+// Unit tests
+//-----------------------------------------------------------------------------
 class BufferTest : public TestCase {
 private:
-  /**
-   * Checks the buffer content
-   * \param b The buffer to check
-   * \param n The number of bytes to check
-   * \param array The array of bytes that should be in the buffer
-   * \param file The file name
-   * \param line The line number
-   */
   void EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[], const char *file, int line);
 public:
   virtual void DoRun (void);
@@ -94,8 +78,7 @@ BufferTest::EnsureWrittenBytes (Buffer b, uint32_t n, uint8_t array[], const cha
     }
 }
 
-/*
- * Works only when variadic macros are
+/** \todo Works only when variadic macros are
  * available which is the case for gcc.
  */
 #define ENSURE_WRITTEN_BYTES(buffer, n, ...)                    \
@@ -377,13 +360,7 @@ BufferTest::DoRun (void)
   val2 |= i.ReadU8 ();
   NS_TEST_ASSERT_MSG_EQ (val1, val2, "Bad ReadNtohU16()");
 }
-
-/**
- * \ingroup network-test
- * \ingroup tests
- *
- * \brief Buffer TestSuite
- */
+//-----------------------------------------------------------------------------
 class BufferTestSuite : public TestSuite
 {
 public:
@@ -396,4 +373,4 @@ BufferTestSuite::BufferTestSuite ()
   AddTestCase (new BufferTest, TestCase::QUICK);
 }
 
-static BufferTestSuite g_bufferTestSuite; //!< Static variable for test initialization
+static BufferTestSuite g_bufferTestSuite;

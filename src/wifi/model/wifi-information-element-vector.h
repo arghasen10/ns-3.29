@@ -42,32 +42,17 @@ public:
   WifiInformationElementVector ();
   virtual ~WifiInformationElementVector ();
 
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId ();
   TypeId GetInstanceTypeId () const;
   virtual uint32_t GetSerializedSize () const;
   virtual void Serialize (Buffer::Iterator start) const;
   /**
-   * \attention This variant should not be used but is implemented due to
-   * backward compatibility reasons
+   * \attention When you use RemoveHeader, WifiInformationElementVector supposes, that
+   * all buffer consists of information elements
    *
-   * \param start buffer location to start deserializing from
-   * \return number of bytes deserialized
+   * \param start
    */
   virtual uint32_t Deserialize (Buffer::Iterator start);
-  /**
-   * Deserialize a number of WifiInformationElements 
-   *
-   * The size of this Header should equal start.GetDistanceFrom (end).
-   *
-   * \param start starting buffer location
-   * \param end ending buffer location
-   * \return number of bytes deserialized
-   */
-  virtual uint32_t Deserialize (Buffer::Iterator start, Buffer::Iterator end);
   virtual void Print (std::ostream &os) const;
 
   /**
@@ -78,31 +63,17 @@ public:
    * \return deserialized bytes
    */
   virtual uint32_t DeserializeSingleIe (Buffer::Iterator start);
+  /// Set maximum size to control overflow of the max packet length
+  void SetMaxSize (uint16_t size);
   /// As soon as this is a vector, we define an Iterator
   typedef std::vector<Ptr<WifiInformationElement> >::iterator Iterator;
-  /**
-   * Returns Begin of the vector
-   * \returns the begin of the vector
-   */
+  /// Returns Begin of the vector
   Iterator Begin ();
-  /**
-   * Returns End of the vector
-   * \returns the end of the vector
-   */
+  /// Returns End of the vector
   Iterator End ();
-  /**
-   * add an IE, if maxSize has exceeded, returns false
-   *
-   * \param element wifi information element to add
-   * \returns true is added
-   */
+  /// add an IE, if maxSize has exceeded, returns false
   bool AddInformationElement (Ptr<WifiInformationElement> element);
-  /**
-   * vector of pointers to information elements is the body of IeVector
-   *
-   * \param id the element id to find
-   * \returns the information element
-   */
+  /// vector of pointers to information elements is the body of IeVector
   Ptr<WifiInformationElement> FindFirst (WifiInformationElementId id) const;
 
   /**
@@ -121,10 +92,7 @@ protected:
    * typedef for a vector of WifiInformationElements.
    */
   typedef std::vector<Ptr<WifiInformationElement> > IE_VECTOR;
-  /**
-   * Current number of bytes
-   * \returns the number of bytes
-   */
+  /// Current number of bytes
   uint32_t GetSize () const;
   IE_VECTOR m_elements; //!< Information element vector
   /// Size in bytes (actually, max packet length)

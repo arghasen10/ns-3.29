@@ -29,7 +29,6 @@ NS_LOG_COMPONENT_DEFINE ("LteFrStrictAlgorithm");
 
 NS_OBJECT_ENSURE_REGISTERED (LteFrStrictAlgorithm);
 
-/// FrStrictDownlinkDefaultConfiguration structure
 static const struct FrStrictDownlinkDefaultConfiguration
 {
   uint8_t cellId; ///< cell ID
@@ -53,9 +52,8 @@ static const struct FrStrictDownlinkDefaultConfiguration
   { 1, 100, 28, 0, 24},
   { 2, 100, 28, 24, 24},
   { 3, 100, 28, 48, 24}
-}; ///< the strict downlink default configuration
+};
 
-/// FrStrictUplinkDefaultConfiguration structure
 static const struct FrStrictUplinkDefaultConfiguration
 {
   uint8_t cellId; ///< cell ID
@@ -79,11 +77,9 @@ static const struct FrStrictUplinkDefaultConfiguration
   { 1, 100, 28, 0, 24},
   { 2, 100, 28, 24, 24},
   { 3, 100, 28, 48, 24}
-}; ///< the strict uplink default configuration
+};
 
-/** \returns number of downlink configurations */
 const uint16_t NUM_DOWNLINK_CONFS (sizeof (g_frStrictDownlinkDefaultConfiguration) / sizeof (FrStrictDownlinkDefaultConfiguration));
-/** \returns number of uplink configurations */
 const uint16_t NUM_UPLINK_CONFS (sizeof (g_frStrictUplinkDefaultConfiguration) / sizeof (FrStrictUplinkDefaultConfiguration));
 
 

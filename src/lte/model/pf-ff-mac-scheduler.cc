@@ -35,7 +35,8 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("PfFfMacScheduler");
 
-/// PF type 0 allocation RBG
+//#define DEBUG_UE_SCHEDULER 0
+
 static const int PfType0AllocationRbg[4] = {
   10,       // RGB size 1
   26,       // RGB size 2
@@ -105,6 +106,7 @@ PfFfMacScheduler::GetTypeId (void)
                    MakeUintegerAccessor (&PfFfMacScheduler::m_ulGrantMcs),
                    MakeUintegerChecker<uint8_t> ())
   ;
+  std::cout << "UlGrantMcs " <<  "\n";
   return tid;
 }
 
@@ -552,6 +554,10 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
         }
       index++;
     }
+    /*std::cout << "Initial ulRbMap: ";
+    for (std::vector<bool>::const_iterator j = ulRbMap.begin(); j != ulRbMap.end(); ++j)
+      std::cout << *j << ' ';
+    std::cout << "\n";*/
 
   if (tmpMinBandwidth > maxContinuousUlBandwidth)
     {
@@ -565,7 +571,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
   std::vector <struct RachListElement_s>::iterator itRach;
   for (itRach = m_rachList.begin (); itRach != m_rachList.end (); itRach++)
     {
-      NS_ASSERT_MSG (m_amc->GetUlTbSizeFromMcs (m_ulGrantMcs, m_cschedCellConfig.m_ulBandwidth) > (*itRach).m_estimatedSize, " Default UL Grant MCS does not allow to send RACH messages");
+      NS_ASSERT_MSG (m_amc->GetTbSizeFromMcs (m_ulGrantMcs, m_cschedCellConfig.m_ulBandwidth) > (*itRach).m_estimatedSize, " Default UL Grant MCS does not allow to send RACH messages");
       BuildRarListElement_s newRar;
       newRar.m_rnti = (*itRach).m_rnti;
       // DL-RACH Allocation
@@ -573,13 +579,13 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
       // UL-RACH Allocation
       newRar.m_grant.m_rnti = newRar.m_rnti;
       newRar.m_grant.m_mcs = m_ulGrantMcs;
-      uint16_t rbLen = 1;
+      uint16_t rbLen = 0;
       uint16_t tbSizeBits = 0;
       // find lowest TB size that fits UL grant estimated size
       while ((tbSizeBits < (*itRach).m_estimatedSize) && (rbStart + rbLen < (ffrRbStartOffset + maxContinuousUlBandwidth)))
         {
           rbLen++;
-          tbSizeBits = m_amc->GetUlTbSizeFromMcs (m_ulGrantMcs, rbLen);
+          tbSizeBits = m_amc->GetTbSizeFromMcs (m_ulGrantMcs, rbLen);
         }
       if (tbSizeBits < (*itRach).m_estimatedSize)
         {
@@ -593,7 +599,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
       newRar.m_grant.m_tpc = 0;
       newRar.m_grant.m_cqiRequest = false;
       newRar.m_grant.m_ulDelay = false;
-      NS_LOG_INFO (this << " UL grant allocated to RNTI " << (*itRach).m_rnti << " rbStart " << rbStart << " rbLen " << rbLen << " MCS " << m_ulGrantMcs << " tbSize " << newRar.m_grant.m_tbSize);
+      NS_LOG_INFO (this << " UL grant allocated to RNTI " << (*itRach).m_rnti << " rbStart " << rbStart << " rbLen " << rbLen << " MCS " << (int)m_ulGrantMcs << " tbSize " << newRar.m_grant.m_tbSize);
       for (uint16_t i = rbStart; i < rbStart + rbLen; i++)
         {
           m_rachAllocationMap.at (i) = (*itRach).m_rnti;
@@ -640,7 +646,10 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
       rbStart = rbStart + rbLen;
       ret.m_buildRarList.push_back (newRar);
     }
+  /*if(m_rachList.size() != 0)
+    NS_ASSERT(0);*/
   m_rachList.clear ();
+
 
 
   // Process DL HARQ feedback
@@ -666,6 +675,8 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
       // Ignore HARQ feedback
       m_dlInfoListBuffered.clear ();
     }
+  //std::cout << "m_dlInfoListBuffered.size: " << m_dlInfoListBuffered.size() << "\n";
+
   std::vector <struct DlInfoListElement_s> dlInfoListUntxed;
   for (uint16_t i = 0; i < m_dlInfoListBuffered.size (); i++)
     {
@@ -919,8 +930,9 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
     }
 
 
+ 
 
-  for (int i = 0; i < rbgNum; i++)
+  for (int i = 0; i < 6/*rbgNum*/; i++)
     {
       NS_LOG_INFO (this << " ALLOCATION for RBG " << i << " of " << rbgNum);
       if (rbgMap.at (i) == false)
@@ -993,7 +1005,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
                               // no info on this subband -> worst MCS
                               mcs = 0;
                             }
-                          achievableRate += ((m_amc->GetDlTbSizeFromMcs (mcs, rbgSize) / 8) / 0.001);   // = TB size / TTI
+                          achievableRate += ((m_amc->GetTbSizeFromMcs (mcs, rbgSize) / 8) / 0.001);   // = TB size / TTI
                         }
 
                       double rcqi = achievableRate / (*it).second.lastAveragedThroughput;
@@ -1015,6 +1027,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
             }
           else
             {
+              NS_LOG_INFO (this << " UE available for this RB");
               rbgMap.at (i) = true;
               std::map <uint16_t, std::vector <uint16_t> >::iterator itMap;
               itMap = allocationMap.find ((*itMax).first);
@@ -1119,7 +1132,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
       for (uint8_t j = 0; j < nLayer; j++)
         {
           newDci.m_mcs.push_back (m_amc->GetMcsFromCqi (worstCqi.at (j)));
-          int tbSize = (m_amc->GetDlTbSizeFromMcs (newDci.m_mcs.at (j), RgbPerRnti * rbgSize) / 8); // (size of TB in bytes according to table 7.1.7.2.1-1 of 36.213)
+          int tbSize = (m_amc->GetTbSizeFromMcs (newDci.m_mcs.at (j), RgbPerRnti * rbgSize) / 8); // (size of TB in bytes according to table 7.1.7.2.1-1 of 36.213)
           newDci.m_tbsSize.push_back (tbSize);
           NS_LOG_INFO (this << " Layer " << (uint16_t)j << " MCS selected" << m_amc->GetMcsFromCqi (worstCqi.at (j)));
           bytesTxed += tbSize;
@@ -1150,6 +1163,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
                   RlcPduListElement_s newRlcEl;
                   newRlcEl.m_logicalChannelIdentity = (*itBufReq).first.m_lcId;
                   newRlcEl.m_size = newDci.m_tbsSize.at (j) / lcActives;
+                  //std::cout << "m_tbsSize:" << newDci.m_tbsSize.at (j) << " lcActives:" << lcActives << "\n";
                   NS_LOG_INFO (this << " LCID " << (uint32_t) newRlcEl.m_logicalChannelIdentity << " size " << newRlcEl.m_size << " layer " << (uint16_t)j);
                   newRlcPduLe.push_back (newRlcEl);
                   UpdateDlRlcBufferInfo (newDci.m_rnti, newRlcEl.m_logicalChannelIdentity, newRlcEl.m_size);
@@ -1199,7 +1213,7 @@ PfFfMacScheduler::DoSchedDlTriggerReq (const struct FfMacSchedSapProvider::Sched
           (*itHarqTimer).second.at (newDci.m_harqProcess) = 0;
         }
 
-      // ...more parameters -> ignored in this version
+      // ...more parameters -> ingored in this version
 
       ret.m_buildDataList.push_back (newEl);
       // update UE stats
@@ -1491,10 +1505,12 @@ PfFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sched
   // Divide the remaining resources equally among the active users starting from the subsequent one served last scheduling trigger
   uint16_t tempRbPerFlow = (ffrUlBandwidth) / (nflows + rntiAllocated.size ());
   uint16_t rbPerFlow = (minContinuousUlBandwidth < tempRbPerFlow) ? minContinuousUlBandwidth : tempRbPerFlow;
+  //std::cout << "rbPerFlow: " << rbPerFlow << " ffrUlBandwidth:" << (int)ffrUlBandwidth << " nflows: " << nflows << " ntiAllocated.size (): " << rntiAllocated.size () << "\n";
+  //std::cout << "minContinuousUlBandwidth: " << (int)minContinuousUlBandwidth << " tempRbPerFlow:" << tempRbPerFlow << "\n\n\n";
 
-  if (rbPerFlow < 3)
+  //if (rbPerFlow < 3)
     {
-      rbPerFlow = 3;  // at least 3 rbg per flow (till available resource) to ensure TxOpportunity >= 7 bytes
+      rbPerFlow = 1;  // at least 3 rbg per flow (till available resource) to ensure TxOpportunity >= 7 bytes
     }
 
   int rbAllocated = 0;
@@ -1552,6 +1568,7 @@ PfFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sched
       uldci.m_rbLen = rbPerFlow;
       bool allocated = false;
 
+      //std::cout << "allocated:" << allocated << " rbAllocated: " << rbAllocated << " rbPerFlow:" << rbPerFlow << " m_ulBandwidth:" << (int)m_cschedCellConfig.m_ulBandwidth << " rbPerFlow:" << rbPerFlow << "\n"; 
       while ((!allocated)&&((rbAllocated + rbPerFlow - m_cschedCellConfig.m_ulBandwidth) < 1) && (rbPerFlow != 0))
         {
           // check availability
@@ -1664,7 +1681,7 @@ PfFfMacScheduler::DoSchedUlTriggerReq (const struct FfMacSchedSapProvider::Sched
           uldci.m_mcs = m_amc->GetMcsFromCqi (cqi);
         }
 
-      uldci.m_tbSize = (m_amc->GetUlTbSizeFromMcs (uldci.m_mcs, rbPerFlow) / 8);
+      uldci.m_tbSize = (m_amc->GetTbSizeFromMcs (uldci.m_mcs, rbPerFlow) / 8);
       UpdateUlRlcBufferInfo (uldci.m_rnti, uldci.m_tbSize);
       uldci.m_ndi = 1;
       uldci.m_cceIndex = 0;
@@ -1885,7 +1902,8 @@ PfFfMacScheduler::DoSchedUlCqiInfoReq (const struct FfMacSchedSapProvider::Sched
               {
                 // update the value
                 (*itCqi).second.at (i) = sinr;
-                NS_LOG_DEBUG (this << " RNTI " << (*itMap).second.at (i) << " RB " << i << " SINR " << sinr);
+                if(sinr > 0)
+                  NS_LOG_DEBUG (this << " RNTI " << (*itMap).second.at (i) << " RB " << i << " SINR " << sinr);
                 // update correspondent timer
                 std::map <uint16_t, uint32_t>::iterator itTimers;
                 itTimers = m_ueCqiTimers.find ((*itMap).second.at (i));

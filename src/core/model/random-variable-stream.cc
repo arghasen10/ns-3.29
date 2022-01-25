@@ -40,7 +40,7 @@
 /**
  * \file
  * \ingroup randomvariable
- * ns3::RandomVariableStream and related implementations
+ * Implementation of ns3::RandomVariableStream and derivatives.
  */
 
 namespace ns3 {
@@ -1488,7 +1488,7 @@ DeterministicRandomVariable::~DeterministicRandomVariable ()
 }
 
 void
-DeterministicRandomVariable::SetValueArray (double* values, std::size_t length)
+DeterministicRandomVariable::SetValueArray (double* values, uint64_t length)
 {
   NS_LOG_FUNCTION (this << values << length);
   // Delete any values currently set.
@@ -1503,7 +1503,7 @@ DeterministicRandomVariable::SetValueArray (double* values, std::size_t length)
   m_next = length;
 
   // Copy the values.
-  for (std::size_t i = 0; i < m_count; i++)
+  for (uint64_t i = 0; i < m_count; i++)
     {
       m_data[i] = values[i];
     }
@@ -1544,7 +1544,6 @@ EmpiricalRandomVariable::ValueCDF::ValueCDF (double v, double c)
     cdf (c)
 {
   NS_LOG_FUNCTION (this << v << c);
-  NS_ASSERT (c >= 0.0 && c <= 1.0);
 }
 EmpiricalRandomVariable::ValueCDF::ValueCDF (const ValueCDF& c)
   : value (c.value),
@@ -1565,7 +1564,7 @@ EmpiricalRandomVariable::GetTypeId (void)
 }
 EmpiricalRandomVariable::EmpiricalRandomVariable ()
   :
-  m_validated (false)
+  validated (false)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -1576,9 +1575,13 @@ EmpiricalRandomVariable::GetValue (void)
   NS_LOG_FUNCTION (this);
   // Return a value from the empirical distribution
   // This code based (loosely) on code by Bruce Mah (Thanks Bruce!)
-  if (!m_validated)
+  if (emp.size () == 0)
     {
-      Validate ();
+      return 0.0; // HuH? No empirical data
+    }
+  if (!validated)
+    {
+      Validate ();      // Insure in non-decreasing
     }
 
   // Get a uniform random variable in [0,1].
@@ -1588,28 +1591,28 @@ EmpiricalRandomVariable::GetValue (void)
       r = (1 - r);
     }
 
-  if (r <= m_emp.front ().cdf)
+  if (r <= emp.front ().cdf)
     {
-      return m_emp.front ().value; // Less than first
+      return emp.front ().value; // Less than first
     }
-  if (r >= m_emp.back ().cdf)
+  if (r >= emp.back ().cdf)
     {
-      return m_emp.back ().value;  // Greater than last
+      return emp.back ().value;  // Greater than last
     }
   // Binary search
   std::vector<ValueCDF>::size_type bottom = 0;
-  std::vector<ValueCDF>::size_type top = m_emp.size () - 1;
+  std::vector<ValueCDF>::size_type top = emp.size () - 1;
   while (1)
     {
       std::vector<ValueCDF>::size_type c = (top + bottom) / 2;
-      if (r >= m_emp[c].cdf && r < m_emp[c + 1].cdf)
+      if (r >= emp[c].cdf && r < emp[c + 1].cdf)
         { // Found it
-          return Interpolate (m_emp[c].cdf, m_emp[c + 1].cdf,
-                              m_emp[c].value, m_emp[c + 1].value,
+          return Interpolate (emp[c].cdf, emp[c + 1].cdf,
+                              emp[c].value, emp[c + 1].value,
                               r);
         }
       // Not here, adjust bounds
-      if (r < m_emp[c].cdf)
+      if (r < emp[c].cdf)
         {
           top    = c - 1;
         }
@@ -1631,20 +1634,16 @@ void EmpiricalRandomVariable::CDF (double v, double c)
 { // Add a new empirical datapoint to the empirical cdf
   // NOTE.   These MUST be inserted in non-decreasing order
   NS_LOG_FUNCTION (this << v << c);
-  m_emp.push_back (ValueCDF (v, c));
+  emp.push_back (ValueCDF (v, c));
 }
 
 void EmpiricalRandomVariable::Validate ()
 {
   NS_LOG_FUNCTION (this);
-  if (m_emp.empty ())
+  ValueCDF prior = emp[0];
+  for (std::vector<ValueCDF>::size_type i = 0; i < emp.size (); ++i)
     {
-      NS_FATAL_ERROR ("CDF is not initialized");
-    }
-  ValueCDF prior = m_emp[0];
-  for (std::vector<ValueCDF>::size_type i = 0; i < m_emp.size (); ++i)
-    {
-      ValueCDF& current = m_emp[i];
+      ValueCDF& current = emp[i];
       if (current.value < prior.value || current.cdf < prior.cdf)
         { // Error
           std::cerr << "Empirical Dist error,"
@@ -1656,11 +1655,7 @@ void EmpiricalRandomVariable::Validate ()
         }
       prior = current;
     }
-  if (prior.cdf != 1.0)
-    {
-      NS_FATAL_ERROR ("CDF does not cover the whole distribution");
-    }
-  m_validated = true;
+  validated = true;
 }
 
 double EmpiricalRandomVariable::Interpolate (double c1, double c2,

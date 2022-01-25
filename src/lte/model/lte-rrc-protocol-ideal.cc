@@ -35,12 +35,6 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteRrcProtocolIdeal");
 
-/**
- * \ingroup lte
- *
- */
-
-/// RRC ideal message delay
 static const Time RRC_IDEAL_MSG_DELAY = MilliSeconds (0);
 
 NS_OBJECT_ENSURE_REGISTERED (LteUeRrcProtocolIdeal);
@@ -196,7 +190,7 @@ LteUeRrcProtocolIdeal::SetEnbRrcSapProvider ()
             }
           else
             {
-              if (enbDev->HasCellId (cellId))
+              if (enbDev->GetCellId () == cellId)
                 {
                   found = true;          
                   break;
@@ -329,9 +323,9 @@ LteEnbRrcProtocolIdeal::DoRemoveUe (uint16_t rnti)
 }
 
 void 
-LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::SystemInformation msg)
+LteEnbRrcProtocolIdeal::DoSendSystemInformation (LteRrcSap::SystemInformation msg)
 {
-  NS_LOG_FUNCTION (this << cellId);
+  NS_LOG_FUNCTION (this << m_cellId);
   // walk list of all nodes to get UEs with this cellId
   Ptr<LteUeRrc> ueRrc;
   for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
@@ -345,7 +339,7 @@ LteEnbRrcProtocolIdeal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::Sys
             {
               Ptr<LteUeRrc> ueRrc = ueDev->GetRrc ();              
               NS_LOG_LOGIC ("considering UE IMSI " << ueDev->GetImsi () << " that has cellId " << ueRrc->GetCellId ());
-              if (ueRrc->GetCellId () == cellId)
+              if (ueRrc->GetCellId () == m_cellId)
                 {       
                   NS_LOG_LOGIC ("sending SI to IMSI " << ueDev->GetImsi ());
                   ueRrc->GetLteUeRrcSapProvider ()->RecvSystemInformation (msg);
@@ -405,6 +399,15 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::Rr
 }
 
 void 
+LteEnbRrcProtocolIdeal::DoSendRrcPagingDirect (uint16_t rnti)
+{
+  Simulator::Schedule (MilliSeconds (0),
+               &LteUeRrcSapProvider::RecvRrcPagingDirect,
+               GetUeRrcSapProvider (rnti));
+}
+
+
+void
 LteEnbRrcProtocolIdeal::DoSendRrcConnectionReject (uint16_t rnti, LteRrcSap::RrcConnectionReject msg)
 {
   Simulator::Schedule (RRC_IDEAL_MSG_DELAY, 
@@ -425,10 +428,10 @@ LteEnbRrcProtocolIdeal::DoSendRrcConnectionReject (uint16_t rnti, LteRrcSap::Rrc
  * 
  */
 
-static std::map<uint32_t, LteRrcSap::HandoverPreparationInfo> g_handoverPreparationInfoMsgMap; ///< handover preparation info message map
-static uint32_t g_handoverPreparationInfoMsgIdCounter = 0; ///< handover preparation info message ID counter
+static std::map<uint32_t, LteRrcSap::HandoverPreparationInfo> g_handoverPreparationInfoMsgMap;
+static uint32_t g_handoverPreparationInfoMsgIdCounter = 0;
 
-/**
+/*
  * This header encodes the map key discussed above. We keep this
  * private since it should not be used outside this file.
  * 
@@ -436,22 +439,8 @@ static uint32_t g_handoverPreparationInfoMsgIdCounter = 0; ///< handover prepara
 class IdealHandoverPreparationInfoHeader : public Header
 {
 public:
-  /**
-   * Get the message ID function
-   *
-   * \returns the message ID
-   */
   uint32_t GetMsgId ();
-  /**
-   * Set the message ID function
-   *
-   * \param id the message ID 
-   */
   void SetMsgId (uint32_t id);
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
   virtual void Print (std::ostream &os) const;
@@ -460,7 +449,7 @@ public:
   virtual uint32_t Deserialize (Buffer::Iterator start);
 
 private:
-  uint32_t m_msgId; ///< message ID
+  uint32_t m_msgId;
 };
 
 uint32_t 
@@ -546,10 +535,10 @@ LteEnbRrcProtocolIdeal::DoDecodeHandoverPreparationInformation (Ptr<Packet> p)
 
 
 
-static std::map<uint32_t, LteRrcSap::RrcConnectionReconfiguration> g_handoverCommandMsgMap; ///< handover command message map
-static uint32_t g_handoverCommandMsgIdCounter = 0; ///< handover command message ID counter
+static std::map<uint32_t, LteRrcSap::RrcConnectionReconfiguration> g_handoverCommandMsgMap;
+static uint32_t g_handoverCommandMsgIdCounter = 0;
 
-/**
+/*
  * This header encodes the map key discussed above. We keep this
  * private since it should not be used outside this file.
  * 
@@ -557,22 +546,8 @@ static uint32_t g_handoverCommandMsgIdCounter = 0; ///< handover command message
 class IdealHandoverCommandHeader : public Header
 {
 public:
-  /**
-   * Get the message ID function
-   *
-   * \returns the message ID
-   */
   uint32_t GetMsgId ();
-  /**
-   * Set the message ID function
-   *
-   * \param id the message ID
-   */
   void SetMsgId (uint32_t id);
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
   virtual TypeId GetInstanceTypeId (void) const;
   virtual void Print (std::ostream &os) const;
@@ -581,7 +556,7 @@ public:
   virtual uint32_t Deserialize (Buffer::Iterator start);
 
 private:
-  uint32_t m_msgId; ///< message ID
+  uint32_t m_msgId;
 };
 
 uint32_t 

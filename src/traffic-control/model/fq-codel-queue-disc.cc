@@ -21,10 +21,7 @@
 
 #include "ns3/log.h"
 #include "ns3/string.h"
-#include "ns3/queue.h"
 #include "fq-codel-queue-disc.h"
-#include "codel-queue-disc.h"
-#include "ns3/net-device-queue-interface.h"
 
 namespace ns3 {
 
@@ -108,12 +105,11 @@ TypeId FqCoDelQueueDisc::GetTypeId (void)
                    StringValue ("5ms"),
                    MakeStringAccessor (&FqCoDelQueueDisc::m_target),
                    MakeStringChecker ())
-    .AddAttribute ("MaxSize",
-                   "The maximum number of packets accepted by this queue disc",
-                   QueueSizeValue (QueueSize ("10240p")),
-                   MakeQueueSizeAccessor (&QueueDisc::SetMaxSize,
-                                          &QueueDisc::GetMaxSize),
-                   MakeQueueSizeChecker ())
+    .AddAttribute ("PacketLimit",
+                   "The hard limit on the real queue size, measured in packets",
+                   UintegerValue (10 * 1024),
+                   MakeUintegerAccessor (&FqCoDelQueueDisc::m_limit),
+                   MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("Flows",
                    "The number of queues into which the incoming packets are classified",
                    UintegerValue (1024),
@@ -124,18 +120,13 @@ TypeId FqCoDelQueueDisc::GetTypeId (void)
                    UintegerValue (64),
                    MakeUintegerAccessor (&FqCoDelQueueDisc::m_dropBatchSize),
                    MakeUintegerChecker<uint32_t> ())
-    .AddAttribute ("Perturbation",
-                   "The salt used as an additional input to the hash function used to classify packets",
-                   UintegerValue (0),
-                   MakeUintegerAccessor (&FqCoDelQueueDisc::m_perturbation),
-                   MakeUintegerChecker<uint32_t> ())
   ;
   return tid;
 }
 
 FqCoDelQueueDisc::FqCoDelQueueDisc ()
-  : QueueDisc (QueueDiscSizePolicy::MULTIPLE_QUEUES, QueueSizeUnit::PACKETS),
-    m_quantum (0)
+  : m_quantum (0),
+    m_overlimitDroppedPackets (0)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -163,27 +154,16 @@ FqCoDelQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
   NS_LOG_FUNCTION (this << item);
 
-  uint32_t h = 0;
+  int32_t ret = Classify (item);
 
-  if (GetNPacketFilters () == 0)
+  if (ret == PacketFilter::PF_NO_MATCH)
     {
-      h = item->Hash (m_perturbation) % m_flows;
+      NS_LOG_ERROR ("No filter has been able to classify this packet, drop it.");
+      Drop (item);
+      return false;
     }
-  else
-    {
-      int32_t ret = Classify (item);
 
-      if (ret != PacketFilter::PF_NO_MATCH)
-        {
-          h = ret % m_flows;
-        }
-      else
-        {
-          NS_LOG_ERROR ("No filter has been able to classify this packet, drop it.");
-          DropBeforeEnqueue (item, UNCLASSIFIED_DROP);
-          return false;
-        }
-    }
+  uint32_t h = ret % m_flows;
 
   Ptr<FqCoDelFlow> flow;
   if (m_flowsIndices.find (h) == m_flowsIndices.end ())
@@ -213,7 +193,7 @@ FqCoDelQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 
   NS_LOG_DEBUG ("Packet enqueued into flow " << h << "; flow index " << m_flowsIndices[h]);
 
-  if (GetCurrentSize () > GetMaxSize ())
+  if (GetNPackets () > m_limit)
     {
       FqCoDelDrop ();
     }
@@ -297,9 +277,35 @@ FqCoDelQueueDisc::DoDequeue (void)
         }
     } while (item == 0);
 
-  flow->IncreaseDeficit (item->GetSize () * -1);
+  flow->IncreaseDeficit (-item->GetPacketSize ());
 
   return item;
+}
+
+Ptr<const QueueDiscItem>
+FqCoDelQueueDisc::DoPeek (void) const
+{
+  NS_LOG_FUNCTION (this);
+
+  Ptr<FqCoDelFlow> flow;
+
+  if (!m_newFlows.empty ())
+    {
+      flow = m_newFlows.front ();
+    }
+  else
+    {
+      if (!m_oldFlows.empty ())
+        {
+          flow = m_oldFlows.front ();
+        }
+      else
+        {
+          return 0;
+        }
+    }
+
+  return flow->GetQueueDisc ()->Peek ();
 }
 
 bool
@@ -309,6 +315,12 @@ FqCoDelQueueDisc::CheckConfig (void)
   if (GetNQueueDiscClasses () > 0)
     {
       NS_LOG_ERROR ("FqCoDelQueueDisc cannot have classes");
+      return false;
+    }
+
+  if (GetNPacketFilters () == 0)
+    {
+      NS_LOG_ERROR ("FqCoDelQueueDisc needs at least a packet filter");
       return false;
     }
 
@@ -339,7 +351,8 @@ FqCoDelQueueDisc::InitializeParams (void)
   m_flowFactory.SetTypeId ("ns3::FqCoDelFlow");
 
   m_queueDiscFactory.SetTypeId ("ns3::CoDelQueueDisc");
-  m_queueDiscFactory.Set ("MaxSize", QueueSizeValue (GetMaxSize ()));
+  m_queueDiscFactory.Set ("Mode", EnumValue (Queue::QUEUE_MODE_PACKETS));
+  m_queueDiscFactory.Set ("MaxPackets", UintegerValue (m_limit + 1));
   m_queueDiscFactory.Set ("Interval", StringValue (m_interval));
   m_queueDiscFactory.Set ("Target", StringValue (m_target));
 }
@@ -367,14 +380,15 @@ FqCoDelQueueDisc::FqCoDelDrop (void)
   /* Our goal is to drop half of this fat flow backlog */
   uint32_t len = 0, count = 0, threshold = maxBacklog >> 1;
   qd = GetQueueDiscClass (index)->GetQueueDisc ();
-  Ptr<QueueDiscItem> item;
+  Ptr<QueueItem> item;
 
   do
     {
-      item = qd->GetInternalQueue (0)->Dequeue ();
-      DropAfterDequeue (item, OVERLIMIT_DROP);
-      len += item->GetSize ();
+      item = qd->GetInternalQueue (0)->Remove ();
+      len += item->GetPacketSize ();
     } while (++count < m_dropBatchSize && len < threshold);
+
+  m_overlimitDroppedPackets += count;
 
   return index;
 }

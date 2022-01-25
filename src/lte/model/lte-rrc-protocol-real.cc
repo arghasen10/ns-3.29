@@ -36,7 +36,6 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteRrcProtocolReal");
 
-/// RRC real message delay
 const Time RRC_REAL_MSG_DELAY = MilliSeconds (0); 
 
 NS_OBJECT_ENSURE_REGISTERED (LteUeRrcProtocolReal);
@@ -256,7 +255,7 @@ LteUeRrcProtocolReal::SetEnbRrcSapProvider ()
             }
           else
             {
-              if (enbDev->HasCellId (cellId))
+              if (enbDev->GetCellId () == cellId)
                 {
                   found = true;
                   break;
@@ -289,7 +288,7 @@ LteUeRrcProtocolReal::DoReceivePdcpPdu (Ptr<Packet> p)
   LteRrcSap::RrcConnectionSetup rrcConnectionSetupMsg;
   LteRrcSap::RrcConnectionReject rrcConnectionRejectMsg;
 
-  // Deserialize packet and call member recv function with appropriate structure
+  // Deserialize packet and call member recv function with appropiate structure
   switch ( rrcDlCcchMessage.GetMessageType () )
     {
     case 0:
@@ -334,7 +333,7 @@ LteUeRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameters
   LteRrcSap::RrcConnectionReconfiguration rrcConnectionReconfigurationMsg;
   LteRrcSap::RrcConnectionRelease rrcConnectionReleaseMsg;
 
-  // Deserialize packet and call member recv function with appropriate structure
+  // Deserialize packet and call member recv function with appropiate structure
   switch ( rrcDlDcchMessage.GetMessageType () )
     {
     case 4:
@@ -504,9 +503,9 @@ LteEnbRrcProtocolReal::DoRemoveUe (uint16_t rnti)
 }
 
 void 
-LteEnbRrcProtocolReal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::SystemInformation msg)
+LteEnbRrcProtocolReal::DoSendSystemInformation (LteRrcSap::SystemInformation msg)
 {
-  NS_LOG_FUNCTION (this << cellId);
+  NS_LOG_FUNCTION (this << m_cellId);
   // walk list of all nodes to get UEs with this cellId
   Ptr<LteUeRrc> ueRrc;
   for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
@@ -520,7 +519,7 @@ LteEnbRrcProtocolReal::DoSendSystemInformation (uint16_t cellId, LteRrcSap::Syst
             {
               Ptr<LteUeRrc> ueRrc = ueDev->GetRrc ();
               NS_LOG_LOGIC ("considering UE IMSI " << ueDev->GetImsi () << " that has cellId " << ueRrc->GetCellId ());
-              if (ueRrc->GetCellId () == cellId)
+              if (ueRrc->GetCellId () == m_cellId)
                 {
                   NS_LOG_LOGIC ("sending SI to IMSI " << ueDev->GetImsi ());
                   ueRrc->GetLteUeRrcSapProvider ()->RecvSystemInformation (msg);
@@ -549,7 +548,14 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionSetup (uint16_t rnti, LteRrcSap::RrcCo
   transmitPdcpPduParameters.rnti = rnti;
   transmitPdcpPduParameters.lcid = 0;
 
-  m_setupUeParametersMap.at (rnti).srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+  if (m_setupUeParametersMap.find (rnti) == m_setupUeParametersMap.end () )
+    {
+      std::cout << "RNTI not found in Enb setup parameters Map!" << std::endl;
+    }
+  else
+    {
+      m_setupUeParametersMap[rnti].srb0SapProvider->TransmitPdcpPdu (transmitPdcpPduParameters);
+    }
 }
 
 void 
@@ -625,6 +631,11 @@ LteEnbRrcProtocolReal::DoSendRrcConnectionReestablishmentReject (uint16_t rnti, 
 }
 
 void 
+LteEnbRrcProtocolReal::DoSendRrcPagingDirect (uint16_t rnti)
+{
+
+}
+void
 LteEnbRrcProtocolReal::DoSendRrcConnectionRelease (uint16_t rnti, LteRrcSap::RrcConnectionRelease msg)
 {
   Ptr<Packet> packet = Create<Packet> ();
@@ -653,7 +664,7 @@ LteEnbRrcProtocolReal::DoReceivePdcpPdu (uint16_t rnti, Ptr<Packet> p)
   RrcConnectionReestablishmentRequestHeader rrcConnectionReestablishmentRequestHeader;
   RrcConnectionRequestHeader rrcConnectionRequestHeader;
 
-  // Deserialize packet and call member recv function with appropriate structure
+  // Deserialize packet and call member recv function with appropiate structure
   switch ( rrcUlCcchMessage.GetMessageType () )
     {
     case 0:
@@ -690,7 +701,7 @@ LteEnbRrcProtocolReal::DoReceivePdcpSdu (LtePdcpSapUser::ReceivePdcpSduParameter
   LteRrcSap::RrcConnectionReestablishmentComplete rrcConnectionReestablishmentCompleteMsg;
   LteRrcSap::RrcConnectionSetupCompleted rrcConnectionSetupCompletedMsg;
 
-  // Deserialize packet and call member recv function with appropriate structure
+  // Deserialize packet and call member recv function with appropiate structure
   switch ( rrcUlDcchMessage.GetMessageType () )
     {
     case 1:

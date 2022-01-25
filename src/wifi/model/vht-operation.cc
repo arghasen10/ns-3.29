@@ -46,7 +46,7 @@ VhtOperation::SetVhtSupported (uint8_t vhtsupported)
 uint8_t
 VhtOperation::GetInformationFieldSize () const
 {
-  //we should not be here if vht is not supported
+  //we should not be here if ht is not supported
   NS_ASSERT (m_vhtSupported > 0);
   return 5;
 }
@@ -161,22 +161,28 @@ VhtOperation::DeserializeInformationField (Buffer::Iterator start, uint8_t lengt
   return length;
 }
 
-/**
- * output stream output operator
- *
- * \param os output stream
- * \param VhtOperation the VHT operation
- *
- * \returns output stream
- */
+ATTRIBUTE_HELPER_CPP (VhtOperation);
+
 std::ostream &
 operator << (std::ostream &os, const VhtOperation &VhtOperation)
 {
-  os << +VhtOperation.GetChannelWidth () << "|"
-     << +VhtOperation.GetChannelCenterFrequencySegment0 () << "|"
-     << +VhtOperation.GetChannelCenterFrequencySegment1 () << "|"
+  os << VhtOperation.GetChannelWidth () << "|"
+     << VhtOperation.GetChannelCenterFrequencySegment0 () << "|"
+     << VhtOperation.GetChannelCenterFrequencySegment1 () << "|"
      << VhtOperation.GetBasicVhtMcsAndNssSet ();
   return os;
+}
+
+std::istream &operator >> (std::istream &is, VhtOperation &VhtOperation)
+{
+  uint8_t c1, c2, c3;
+  uint16_t c4;
+  is >> c1 >> c2 >> c3 >> c4;
+  VhtOperation.SetChannelWidth (c1);
+  VhtOperation.SetChannelCenterFrequencySegment0 (c2);
+  VhtOperation.SetChannelCenterFrequencySegment1 (c3);
+  VhtOperation.SetBasicVhtMcsAndNssSet (c4);
+  return is;
 }
 
 } //namespace ns3

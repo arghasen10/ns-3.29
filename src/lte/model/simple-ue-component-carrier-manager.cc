@@ -37,15 +37,9 @@ NS_OBJECT_ENSURE_REGISTERED (SimpleUeComponentCarrierManager);
 // MAC SAP PROVIDER SAP forwarders
 ///////////////////////////////////////////////////////////
 
-/// SimpleUeCcmMacSapProvider class
 class SimpleUeCcmMacSapProvider : public LteMacSapProvider
 { 
 public:
-  /**
-   * Constructor
-   *
-   * \param mac the component carrier manager
-   */
   SimpleUeCcmMacSapProvider (SimpleUeComponentCarrierManager* mac);
 
   // inherited from LteMacSapProvider
@@ -53,7 +47,7 @@ public:
   virtual void ReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
 
 private:
-  SimpleUeComponentCarrierManager* m_mac; ///< the component carrier manager
+  SimpleUeComponentCarrierManager* m_mac;
 };
 
 SimpleUeCcmMacSapProvider::SimpleUeCcmMacSapProvider (SimpleUeComponentCarrierManager* mac)
@@ -77,17 +71,10 @@ SimpleUeCcmMacSapProvider::ReportBufferStatus (ReportBufferStatusParameters para
 ///////////////////////////////////////////////////////////
 // MAC SAP USER SAP forwarders
 /////////////// ////////////////////////////////////////////
-
-/// SimpleUeCcmMacSapUser class
 class SimpleUeCcmMacSapUser : public LteMacSapUser
 { 
 public:
-  /**
-   * Constructor
-   *
-   * \param mac the component carrier manager
-   */
-  SimpleUeCcmMacSapUser  (SimpleUeComponentCarrierManager* mac);
+ SimpleUeCcmMacSapUser  (SimpleUeComponentCarrierManager* mac);
 
   // inherited from LteMacSapUser
   virtual void NotifyTxOpportunity (uint32_t bytes, uint8_t layer, uint8_t harqId, uint8_t componentCarrierId, uint16_t rnti, uint8_t lcid);
@@ -96,7 +83,7 @@ public:
 
 
 private:
-  SimpleUeComponentCarrierManager* m_mac; ///< the component carrier manager
+  SimpleUeComponentCarrierManager* m_mac;
 };
 
 SimpleUeCcmMacSapUser::SimpleUeCcmMacSapUser (SimpleUeComponentCarrierManager* mac)

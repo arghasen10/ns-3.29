@@ -1036,7 +1036,7 @@ Ipv4L3Protocol::IpForward (Ptr<Ipv4Route> rtentry, Ptr<const Packet> p, const Ip
           ipHeader.GetDestination ().IsMulticast () == false)
         {
           Ptr<Icmpv4L4Protocol> icmp = GetIcmp ();
-          icmp->SendTimeExceededTtl (ipHeader, packet, false);
+          icmp->SendTimeExceededTtl (ipHeader, packet);
         }
       NS_LOG_WARN ("TTL exceeded.  Drop.");
       m_dropTrace (header, packet, DROP_TTL_EXPIRED, m_node->GetObject<Ipv4> (), interface);
@@ -1422,9 +1422,15 @@ Ipv4L3Protocol::DoFragmentation (Ptr<Packet> packet, const Ipv4Header & ipv4Head
 
   uint16_t offset = 0;
   bool moreFragment = true;
-  uint16_t originalOffset = ipv4Header.GetFragmentOffset();
-  bool isLastFragment = ipv4Header.IsLastFragment();
+  uint16_t originalOffset = 0;
+  bool alreadyFragmented = false;
   uint32_t currentFragmentablePartSize = 0;
+
+  if (!ipv4Header.IsLastFragment())
+    {
+      alreadyFragmented = true;
+      originalOffset = ipv4Header.GetFragmentOffset();
+    }
 
   // IPv4 fragments are all 8 bytes aligned but the last.
   // The IP payload size is:
@@ -1447,7 +1453,7 @@ Ipv4L3Protocol::DoFragmentation (Ptr<Packet> packet, const Ipv4Header & ipv4Head
         {
           moreFragment = false;
           currentFragmentablePartSize = p->GetSize () - offset;
-          if (!isLastFragment)
+          if (alreadyFragmented)
             {
               fragmentHeader.SetMoreFragments ();
             }
@@ -1689,7 +1695,7 @@ Ipv4L3Protocol::HandleFragmentsTimeout (std::pair<uint64_t, uint32_t> key, Ipv4H
   if ( packet->GetSize () > 8 )
     {
       Ptr<Icmpv4L4Protocol> icmp = GetIcmp ();
-      icmp->SendTimeExceededTtl (ipHeader, packet, true);
+      icmp->SendTimeExceededTtl (ipHeader, packet);
     }
   m_dropTrace (ipHeader, packet, DROP_FRAGMENT_TIMEOUT, m_node->GetObject<Ipv4> (), iif);
 

@@ -46,7 +46,6 @@ class DlCqiLteControlMessage;
 class UlCqiLteControlMessage;
 class PdcchMapLteControlMessage;
 
-/// DlHarqProcessesBuffer_t typedef
 typedef std::vector <std::vector < Ptr<PacketBurst> > > DlHarqProcessesBuffer_t;
 
 /**
@@ -64,7 +63,7 @@ class LteEnbMac :   public Object
   friend class EnbMacMemberFfMacCschedSapUser;
   /// allow EnbMacMemberLteEnbPhySapUser class friend access
   friend class EnbMacMemberLteEnbPhySapUser;
-  /// allow MemberLteCcmMacSapProvider<LteEnbMac> class friend access
+  /// allow MemberLteCcmMacSapProvider<LteEnbMac> class friend ccess
   friend class MemberLteCcmMacSapProvider<LteEnbMac>;
 
 public:
@@ -263,16 +262,8 @@ private:
   LteEnbCmacSapProvider::AllocateNcRaPreambleReturnValue DoAllocateNcRaPreamble (uint16_t rnti);
 
   // forwarded from LteMacSapProvider
-  /**
-  * \brief Transmit PDU function
-  * \param params LteMacSapProvider::TransmitPduParameters
-  */
-  void DoTransmitPdu (LteMacSapProvider::TransmitPduParameters params);
-  /**
-  * \brief Report Buffer Status function
-  * \param params LteMacSapProvider::ReportBufferStatusParameters
-  */
-  void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters params);
+  void DoTransmitPdu (LteMacSapProvider::TransmitPduParameters);
+  void DoReportBufferStatus (LteMacSapProvider::ReportBufferStatusParameters);
 
 
   // forwarded from FfMacCchedSapUser
@@ -422,7 +413,8 @@ private:
   TracedCallback<uint32_t, uint32_t, uint16_t,
                  uint8_t, uint16_t, uint8_t> m_ulScheduling;
   
-  uint8_t m_macChTtiDelay; ///< delay of MAC, PHY and channel in terms of TTIs
+  uint8_t m_macChTtiDelay;    // delay of MAC, PHY and channel in terms of TTIs
+  //uint8_t m_macChDlTxTtiDelay;  // delay of MAC, PHY and channel in terms of TTIs
 
 
   std::map <uint16_t, DlHarqProcessesBuffer_t> m_miDlHarqProcessesPackets; ///< Packet under transmission of the DL HARQ process
@@ -442,7 +434,7 @@ private:
   };
 
   /**
-   * map storing as key the random access preamble IDs allocated for
+   * map storing as key the random acccess preamble IDs allocated for
    * non-contention based access, and as value the associated info
    * 
    */

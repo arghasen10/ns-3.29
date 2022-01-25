@@ -23,14 +23,11 @@
  * with Nicola Baldo and Dean Armstrong
  */
 
+#include "spectrum-wifi-phy.h"
 #include "ns3/wifi-spectrum-value-helper.h"
 #include "ns3/log.h"
 #include "ns3/boolean.h"
-#include "ns3/net-device.h"
-#include "ns3/node.h"
-#include "spectrum-wifi-phy.h"
 #include "wifi-spectrum-signal-parameters.h"
-#include "wifi-spectrum-phy-interface.h"
 #include "wifi-utils.h"
 
 namespace ns3 {
@@ -74,7 +71,6 @@ SpectrumWifiPhy::DoDispose (void)
   NS_LOG_FUNCTION (this);
   m_channel = 0;
   m_wifiSpectrumPhyInterface = 0;
-  WifiPhy::DoDispose ();
 }
 
 void
@@ -110,9 +106,8 @@ SpectrumWifiPhy::GetRxSpectrumModel () const
         }
       else
         {
-          uint16_t channelWidth = GetChannelWidth ();
-          NS_LOG_DEBUG ("Creating spectrum model from frequency/width pair of (" << GetFrequency () << ", " << channelWidth << ")");
-          m_rxSpectrumModel = WifiSpectrumValueHelper::GetSpectrumModel (GetFrequency (), channelWidth, GetBandBandwidth (), GetGuardBandwidth (channelWidth));
+          NS_LOG_DEBUG ("Creating spectrum model from frequency/width pair of (" << GetFrequency () << ", " << (uint16_t)GetChannelWidth () << ")");
+          m_rxSpectrumModel = WifiSpectrumValueHelper::GetSpectrumModel (GetFrequency (), GetChannelWidth ());
         }
     }
   return m_rxSpectrumModel;
@@ -125,66 +120,9 @@ SpectrumWifiPhy::GetChannel (void) const
 }
 
 void
-SpectrumWifiPhy::SetChannel (const Ptr<SpectrumChannel> channel)
+SpectrumWifiPhy::SetChannel (Ptr<SpectrumChannel> channel)
 {
   m_channel = channel;
-}
-
-void
-SpectrumWifiPhy::ResetSpectrumModel (void)
-{
-  NS_LOG_FUNCTION (this);
-  NS_ASSERT_MSG (IsInitialized (), "Executing method before run-time");
-  uint16_t channelWidth = GetChannelWidth ();
-  NS_LOG_DEBUG ("Run-time change of spectrum model from frequency/width pair of (" << GetFrequency () << ", " << channelWidth << ")");
-  // Replace existing spectrum model with new one, and must call AddRx ()
-  // on the SpectrumChannel to provide this new spectrum model to it
-  m_rxSpectrumModel = WifiSpectrumValueHelper::GetSpectrumModel (GetFrequency (), channelWidth, GetBandBandwidth (), GetGuardBandwidth (channelWidth));
-  m_channel->AddRx (m_wifiSpectrumPhyInterface);
-}
-
-void
-SpectrumWifiPhy::SetChannelNumber (uint8_t nch)
-{
-  NS_LOG_FUNCTION (this << +nch);
-  WifiPhy::SetChannelNumber (nch);
-  if (IsInitialized ())
-    {
-      ResetSpectrumModel ();
-    }
-}
-
-void
-SpectrumWifiPhy::SetFrequency (uint16_t freq)
-{
-  NS_LOG_FUNCTION (this << freq);
-  WifiPhy::SetFrequency (freq);
-  if (IsInitialized ())
-    {
-      ResetSpectrumModel ();
-    }
-}
-
-void
-SpectrumWifiPhy::SetChannelWidth (uint16_t channelwidth)
-{
-  NS_LOG_FUNCTION (this << channelwidth);
-  WifiPhy::SetChannelWidth (channelwidth);
-  if (IsInitialized ())
-    {
-      ResetSpectrumModel ();
-    }
-}
-
-void
-SpectrumWifiPhy::ConfigureStandard (WifiPhyStandard standard)
-{
-  NS_LOG_FUNCTION (this << standard);
-  WifiPhy::ConfigureStandard (standard);
-  if (IsInitialized ())
-    {
-      ResetSpectrumModel ();
-    }
 }
 
 void
@@ -230,8 +168,7 @@ SpectrumWifiPhy::StartRx (Ptr<SpectrumSignalParameters> rxParams)
   // Integrate over our receive bandwidth (i.e., all that the receive
   // spectral mask representing our filtering allows) to find the
   // total energy apparent to the "demodulator".
-  uint16_t channelWidth = GetChannelWidth ();
-  Ptr<SpectrumValue> filter = WifiSpectrumValueHelper::CreateRfFilter (GetFrequency (), channelWidth, GetBandBandwidth (), GetGuardBandwidth (channelWidth));
+  Ptr<SpectrumValue> filter = WifiSpectrumValueHelper::CreateRfFilter (GetFrequency (), GetChannelWidth ());
   SpectrumValue filteredSignal = (*filter) * (*receivedSignalPsd);
   // Add receiver antenna gain
   NS_LOG_DEBUG ("Signal power received (watts) before antenna gain: " << Integral (filteredSignal));
@@ -262,6 +199,12 @@ SpectrumWifiPhy::StartRx (Ptr<SpectrumSignalParameters> rxParams)
   StartReceivePreambleAndHeader (packet, rxPowerW, rxDuration);
 }
 
+Ptr<WifiSpectrumPhyInterface>
+SpectrumWifiPhy::GetSpectrumPhy (void) const
+{
+  return m_wifiSpectrumPhyInterface;
+}
+
 Ptr<AntennaModel>
 SpectrumWifiPhy::GetRxAntenna (void) const
 {
@@ -269,7 +212,7 @@ SpectrumWifiPhy::GetRxAntenna (void) const
 }
 
 void
-SpectrumWifiPhy::SetAntenna (const Ptr<AntennaModel> a)
+SpectrumWifiPhy::SetAntenna (Ptr<AntennaModel> a)
 {
   NS_LOG_FUNCTION (this << a);
   m_antenna = a;
@@ -285,48 +228,32 @@ SpectrumWifiPhy::CreateWifiSpectrumPhyInterface (Ptr<NetDevice> device)
 }
 
 Ptr<SpectrumValue>
-SpectrumWifiPhy::GetTxPowerSpectralDensity (uint16_t centerFrequency, uint16_t channelWidth, double txPowerW, WifiModulationClass modulationClass) const
+SpectrumWifiPhy::GetTxPowerSpectralDensity (uint16_t centerFrequency, uint8_t channelWidth, double txPowerW) const
 {
-  NS_LOG_FUNCTION (centerFrequency << channelWidth << txPowerW);
+  NS_LOG_FUNCTION (centerFrequency << (uint16_t)channelWidth << txPowerW);
   Ptr<SpectrumValue> v;
-  switch (modulationClass)
+  switch (GetStandard ())
     {
-    case WIFI_MOD_CLASS_OFDM:
-    case WIFI_MOD_CLASS_ERP_OFDM:
-      v = WifiSpectrumValueHelper::CreateOfdmTxPowerSpectralDensity (centerFrequency, channelWidth, txPowerW, GetGuardBandwidth (channelWidth));
+    case WIFI_PHY_STANDARD_80211a:
+    case WIFI_PHY_STANDARD_80211g:
+    case WIFI_PHY_STANDARD_holland:
+    case WIFI_PHY_STANDARD_80211_10MHZ:
+    case WIFI_PHY_STANDARD_80211_5MHZ:
+      v = WifiSpectrumValueHelper::CreateOfdmTxPowerSpectralDensity (centerFrequency, channelWidth, txPowerW);
       break;
-    case WIFI_MOD_CLASS_DSSS:
-    case WIFI_MOD_CLASS_HR_DSSS:
-      NS_ABORT_MSG_IF (channelWidth != 22, "Invalid channel width for DSSS");
-      v = WifiSpectrumValueHelper::CreateDsssTxPowerSpectralDensity (centerFrequency, txPowerW, GetGuardBandwidth (channelWidth));
+    case WIFI_PHY_STANDARD_80211b:
+      v = WifiSpectrumValueHelper::CreateDsssTxPowerSpectralDensity (centerFrequency, txPowerW);
       break;
-    case WIFI_MOD_CLASS_HT:
-    case WIFI_MOD_CLASS_VHT:
-      v = WifiSpectrumValueHelper::CreateHtOfdmTxPowerSpectralDensity (centerFrequency, channelWidth, txPowerW, GetGuardBandwidth (channelWidth));
-      break;
-    case WIFI_MOD_CLASS_HE:
-      v = WifiSpectrumValueHelper::CreateHeOfdmTxPowerSpectralDensity (centerFrequency, channelWidth, txPowerW, GetGuardBandwidth (channelWidth));
+    case WIFI_PHY_STANDARD_80211n_2_4GHZ:
+    case WIFI_PHY_STANDARD_80211n_5GHZ:
+    case WIFI_PHY_STANDARD_80211ac:
+      v = WifiSpectrumValueHelper::CreateHtOfdmTxPowerSpectralDensity (centerFrequency, channelWidth, txPowerW);
       break;
     default:
-      NS_FATAL_ERROR ("modulation class unknown: " << modulationClass);
+      NS_FATAL_ERROR ("Standard unknown: " << GetStandard ());
       break;
     }
   return v;
-}
-
-uint16_t
-SpectrumWifiPhy::GetCenterFrequencyForChannelWidth (WifiTxVector txVector) const
-{
-  NS_LOG_FUNCTION (this << txVector);
-  uint16_t centerFrequencyForSupportedWidth = GetFrequency ();
-  uint16_t supportedWidth = GetChannelWidth ();
-  uint16_t currentWidth = txVector.GetChannelWidth ();
-  if (currentWidth != supportedWidth)
-    {
-      uint16_t startingFrequency = centerFrequencyForSupportedWidth - (supportedWidth / 2);
-      return startingFrequency + (currentWidth / 2); // primary channel is in the lower part (for the time being)
-    }
-  return centerFrequencyForSupportedWidth;
 }
 
 void
@@ -334,7 +261,7 @@ SpectrumWifiPhy::StartTx (Ptr<Packet> packet, WifiTxVector txVector, Time txDura
 {
   NS_LOG_DEBUG ("Start transmission: signal power before antenna gain=" << GetPowerDbm (txVector.GetTxPowerLevel ()) << "dBm");
   double txPowerWatts = DbmToW (GetPowerDbm (txVector.GetTxPowerLevel ()) + GetTxGain ());
-  Ptr<SpectrumValue> txPowerSpectrum = GetTxPowerSpectralDensity (GetCenterFrequencyForChannelWidth (txVector), txVector.GetChannelWidth (), txPowerWatts, txVector.GetMode ().GetModulationClass ());
+  Ptr<SpectrumValue> txPowerSpectrum = GetTxPowerSpectralDensity (GetFrequency (), GetChannelWidth (), txPowerWatts);
   Ptr<WifiSpectrumSignalParameters> txParams = Create<WifiSpectrumSignalParameters> ();
   txParams->duration = txDuration;
   txParams->psd = txPowerSpectrum;
@@ -342,67 +269,9 @@ SpectrumWifiPhy::StartTx (Ptr<Packet> packet, WifiTxVector txVector, Time txDura
   txParams->txPhy = m_wifiSpectrumPhyInterface->GetObject<SpectrumPhy> ();
   txParams->txAntenna = m_antenna;
   txParams->packet = packet;
-  NS_LOG_DEBUG ("Starting transmission with power " << WToDbm (txPowerWatts) << " dBm on channel " << +GetChannelNumber ());
+  NS_LOG_DEBUG ("Starting transmission with power " << WToDbm (txPowerWatts) << " dBm on channel " << (uint16_t) GetChannelNumber ());
   NS_LOG_DEBUG ("Starting transmission with integrated spectrum power " << WToDbm (Integral (*txPowerSpectrum)) << " dBm; spectrum model Uid: " << txPowerSpectrum->GetSpectrumModel ()->GetUid ());
   m_channel->StartTx (txParams);
-}
-
-double
-SpectrumWifiPhy::GetBandBandwidth (void) const
-{
-  double bandBandwidth = 0;
-  switch (GetStandard ())
-    {
-    case WIFI_PHY_STANDARD_80211a:
-    case WIFI_PHY_STANDARD_80211g:
-    case WIFI_PHY_STANDARD_holland:
-    case WIFI_PHY_STANDARD_80211b:
-    case WIFI_PHY_STANDARD_80211n_2_4GHZ:
-    case WIFI_PHY_STANDARD_80211n_5GHZ:
-    case WIFI_PHY_STANDARD_80211ac:
-      // Use OFDM subcarrier width of 312.5 KHz as band granularity
-      bandBandwidth = 312500;
-      break;
-    case WIFI_PHY_STANDARD_80211_10MHZ:
-      // Use OFDM subcarrier width of 156.25 KHz as band granularity
-      bandBandwidth = 156250;
-      break;
-    case WIFI_PHY_STANDARD_80211_5MHZ:
-      // Use OFDM subcarrier width of 78.125 KHz as band granularity
-      bandBandwidth = 78125;
-      break;
-    case WIFI_PHY_STANDARD_80211ax_2_4GHZ:
-    case WIFI_PHY_STANDARD_80211ax_5GHZ:
-      // Use OFDM subcarrier width of 78.125 KHz as band granularity
-      bandBandwidth = 78125;
-      break;
-    default:
-      NS_FATAL_ERROR ("Standard unknown: " << GetStandard ());
-      break;
-    }
-  return bandBandwidth;
-}
-
-uint16_t
-SpectrumWifiPhy::GetGuardBandwidth (uint16_t currentChannelWidth) const
-{
-  uint16_t guardBandwidth = 0;
-  if (currentChannelWidth == 22)
-    {
-      //handle case of use of legacy DSSS transmission
-      guardBandwidth = 10;
-    }
-  else
-    {
-      //In order to properly model out of band transmissions for OFDM, the guard
-      //band has been configured so as to expand the modeled spectrum up to the
-      //outermost referenced point in "Transmit spectrum mask" sections' PSDs of
-      //each PHY specification of 802.11-2016 standard. It thus ultimately corresponds
-      //to the currently considered channel bandwidth (which can be different from
-      //supported channel width).
-      guardBandwidth = currentChannelWidth;
-    }
-  return guardBandwidth;
 }
 
 } //namespace ns3

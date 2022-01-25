@@ -24,12 +24,6 @@
 #include "ns3/olsr-routing-protocol.h"
 #include "ns3/ipv4-header.h"
 
-/**
- * \ingroup olsr
- * \defgroup olsr-test olsr module tests
- */
-
-
 /********** Willingness **********/
 
 /// Willingness for forwarding packets from other nodes: never.
@@ -46,18 +40,13 @@
 using namespace ns3;
 using namespace olsr;
 
-
-/**
- * \ingroup olsr-test
- * \ingroup tests
- *
- * Testcase for MPR computation mechanism
- */
+/// Testcase for MPR computation mechanism
 class OlsrMprTestCase : public TestCase
 {
 public:
   OlsrMprTestCase ();
   ~OlsrMprTestCase ();
+  /// \brief Run test case
   virtual void DoRun (void);
 };
 
@@ -178,22 +167,14 @@ OlsrMprTestCase::DoRun ()
   NS_TEST_EXPECT_MSG_EQ ((mpr.find ("10.0.0.9") == mpr.end ()), true, "Node 1 must NOT select node 8 as MPR");
 }
 
-/**
- * \ingroup olsr-test
- * \ingroup tests
- *
- * OLSR protocol test suite
- */
-class OlsrProtocolTestSuite : public TestSuite
+static class OlsrProtocolTestSuite : public TestSuite
 {
 public:
   OlsrProtocolTestSuite ();
-};
+} g_olsrProtocolTestSuite;
 
 OlsrProtocolTestSuite::OlsrProtocolTestSuite ()
   : TestSuite ("routing-olsr", UNIT)
 {
   AddTestCase (new OlsrMprTestCase (), TestCase::QUICK);
 }
-
-static OlsrProtocolTestSuite g_olsrProtocolTestSuite; //!< Static variable for test initialization

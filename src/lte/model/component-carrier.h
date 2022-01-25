@@ -45,10 +45,6 @@ namespace ns3 {
 class ComponentCarrier : public Object
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
 
   ComponentCarrier ();
@@ -141,16 +137,8 @@ public:
    */
   void SetCsgIndication (bool csgIndication);
 
-  /**
-   * \brief Set as primary carrier 
-   * \param primaryCarrier true to set as primary carrier
-   */
   void SetAsPrimary (bool primaryCarrier);
 
-  /**
-   * \brief Checks if the carrier is the primary carrier
-   * \returns true if the carrier is primary
-   */
   bool IsPrimary () const;
 
 
@@ -163,11 +151,11 @@ public:
 protected:
   // inherited from Object
   virtual void DoInitialize (void);
-  uint16_t m_csgId; ///< CSG ID
-  bool m_csgIndication; ///< CSG indication
+  uint16_t m_csgId;
+  bool m_csgIndication;
 
-  bool m_primaryCarrier; ///< whether the carrier is primary
-  bool m_isConstructed; ///< whether the instance is constructed
+  bool m_primaryCarrier;
+  bool m_isConstructed;
 //    bool m_isConfigured;
 
 };

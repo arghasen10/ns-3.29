@@ -61,7 +61,7 @@ public:
 
   /**
    * Get cell identifier
-   * \return cell identifier
+   * \return cell identifer
    */
   uint16_t GetCellId ();
 
@@ -93,24 +93,24 @@ public:
 
   /**
    * Set the LteEnbPhy
-   * \param s a pointer to the LteEnbPhy
+   * \ param s a pointer to the LteEnbPhy
    */
   void SetPhy (Ptr<LteEnbPhy> s);
   /**
    * Set the LteEnbMac
-   * \param s a pointer to the LteEnbMac
+   * \ param s a pointer to the LteEnbMac
    */
   void SetMac (Ptr<LteEnbMac> s);
 
   /**
    * Set the FfMacScheduler Algorithm
-   * \param s a pointer to the FfMacScheduler
+   * \ param s a pointer to the FfMacScheduler
    */
   void SetFfMacScheduler (Ptr<FfMacScheduler> s);
 
   /**
    * Set the LteFfrAlgorithm
-   * \param s a pointer to the LteFfrAlgorithm
+   * \ param s a pointer to the LteFfrAlgorithm
    */
   void SetFfrAlgorithm (Ptr<LteFfrAlgorithm> s);
   
@@ -120,7 +120,7 @@ protected:
 
 private:
 
-  uint16_t m_cellId; ///< Cell identifier
+  uint16_t m_cellId; ///< Cell identifer
   Ptr<LteEnbPhy> m_phy; ///< the Phy instance of this eNodeB component carrier
   Ptr<LteEnbMac> m_mac; ///< the MAC instance of this eNodeB component carrier
   Ptr<FfMacScheduler> m_scheduler; ///< the scheduler instance of this eNodeB component carrier

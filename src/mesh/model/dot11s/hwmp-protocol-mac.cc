@@ -23,6 +23,7 @@
 #include "ns3/simulator.h"
 #include "ns3/nstime.h"
 #include "ns3/log.h"
+#include "ns3/mgt-headers.h"
 #include "dot11s-mac-header.h"
 #include "hwmp-protocol-mac.h"
 #include "hwmp-tag.h"
@@ -40,7 +41,6 @@ namespace dot11s {
 HwmpProtocolMac::HwmpProtocolMac (uint32_t ifIndex, Ptr<HwmpProtocol> protocol) :
   m_ifIndex (ifIndex), m_protocol (protocol)
 {
-  NS_LOG_FUNCTION (this << ifIndex << protocol);
 }
 HwmpProtocolMac::~HwmpProtocolMac ()
 {
@@ -48,14 +48,12 @@ HwmpProtocolMac::~HwmpProtocolMac ()
 void
 HwmpProtocolMac::SetParent (Ptr<MeshWifiInterfaceMac> parent)
 {
-  NS_LOG_FUNCTION (this << parent);
   m_parent = parent;
 }
 
 bool
 HwmpProtocolMac::ReceiveData (Ptr<Packet> packet, const WifiMacHeader & header)
 {
-  NS_LOG_FUNCTION (this << packet << header);
   NS_ASSERT (header.IsData ());
 
   MeshHeader meshHdr;
@@ -97,7 +95,6 @@ HwmpProtocolMac::ReceiveData (Ptr<Packet> packet, const WifiMacHeader & header)
 bool
 HwmpProtocolMac::ReceiveAction (Ptr<Packet> packet, const WifiMacHeader & header)
 {
-  NS_LOG_FUNCTION (this << packet << header);
   m_stats.rxMgt++;
   m_stats.rxMgtBytes += packet->GetSize ();
   WifiActionHeader actionHdr;
@@ -107,9 +104,7 @@ HwmpProtocolMac::ReceiveAction (Ptr<Packet> packet, const WifiMacHeader & header
       return true;
     }
   MeshInformationElementVector elements;
-  // To determine header size here, we can rely on the knowledge that
-  // this is the last header to remove.
-  packet->RemoveHeader (elements, packet->GetSize ());
+  packet->RemoveHeader (elements);
   std::vector<HwmpProtocol::FailedDestination> failedDestinations;
   for (MeshInformationElementVector::Iterator i = elements.Begin (); i != elements.End (); i++)
     {
@@ -171,7 +166,6 @@ HwmpProtocolMac::ReceiveAction (Ptr<Packet> packet, const WifiMacHeader & header
 bool
 HwmpProtocolMac::Receive (Ptr<Packet> packet, const WifiMacHeader & header)
 {
-  NS_LOG_FUNCTION (this << packet << header);
   if (header.IsData ())
     {
       return ReceiveData (packet, header);
@@ -192,7 +186,6 @@ bool
 HwmpProtocolMac::UpdateOutcomingFrame (Ptr<Packet> packet, WifiMacHeader & header, Mac48Address from,
                                        Mac48Address to)
 {
-  NS_LOG_FUNCTION (this << packet << header << from << to);
   if (!header.IsData ())
     {
       return true;
@@ -225,7 +218,7 @@ HwmpProtocolMac::GetWifiActionHeader ()
 void
 HwmpProtocolMac::SendPreq (IePreq preq)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   std::vector<IePreq> preq_vector;
   preq_vector.push_back (preq);
   SendPreq (preq_vector);
@@ -233,7 +226,6 @@ HwmpProtocolMac::SendPreq (IePreq preq)
 void
 HwmpProtocolMac::SendPreq (std::vector<IePreq> preq)
 {
-  NS_LOG_FUNCTION (this);
   Ptr<Packet> packet = Create<Packet> ();
   MeshInformationElementVector elements;
   for (std::vector<IePreq>::iterator i = preq.begin (); i != preq.end (); i++)
@@ -244,7 +236,7 @@ HwmpProtocolMac::SendPreq (std::vector<IePreq> preq)
   packet->AddHeader (GetWifiActionHeader ());
   //create 802.11 header:
   WifiMacHeader hdr;
-  hdr.SetType (WIFI_MAC_MGT_ACTION);
+  hdr.SetAction ();
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
   hdr.SetAddr2 (m_parent->GetAddress ());
@@ -263,7 +255,7 @@ HwmpProtocolMac::SendPreq (std::vector<IePreq> preq)
 void
 HwmpProtocolMac::RequestDestination (Mac48Address dst, uint32_t originator_seqno, uint32_t dst_seqno)
 {
-  NS_LOG_FUNCTION (this << dst << originator_seqno << dst_seqno);
+  NS_LOG_FUNCTION_NOARGS ();
   for (std::vector<IePreq>::iterator i = m_myPreq.begin (); i != m_myPreq.end (); i++)
     {
       if (i->IsFull ())
@@ -287,7 +279,7 @@ HwmpProtocolMac::RequestDestination (Mac48Address dst, uint32_t originator_seqno
 void
 HwmpProtocolMac::SendMyPreq ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   if (m_preqTimer.IsRunning ())
     {
       return;
@@ -305,7 +297,7 @@ HwmpProtocolMac::SendMyPreq ()
 void
 HwmpProtocolMac::SendPrep (IePrep prep, Mac48Address receiver)
 {
-  NS_LOG_FUNCTION (this << receiver);
+  NS_LOG_FUNCTION_NOARGS ();
   //Create packet
   Ptr<Packet> packet = Create<Packet> ();
   MeshInformationElementVector elements;
@@ -314,7 +306,7 @@ HwmpProtocolMac::SendPrep (IePrep prep, Mac48Address receiver)
   packet->AddHeader (GetWifiActionHeader ());
   //create 802.11 header:
   WifiMacHeader hdr;
-  hdr.SetType (WIFI_MAC_MGT_ACTION);
+  hdr.SetAction ();
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
   hdr.SetAddr1 (receiver);
@@ -330,7 +322,7 @@ void
 HwmpProtocolMac::ForwardPerr (std::vector<HwmpProtocol::FailedDestination> failedDestinations, std::vector<
                                 Mac48Address> receivers)
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   Ptr<Packet> packet = Create<Packet> ();
   Ptr<IePerr> perr = Create <IePerr> ();
   MeshInformationElementVector elements;
@@ -355,7 +347,7 @@ HwmpProtocolMac::ForwardPerr (std::vector<HwmpProtocol::FailedDestination> faile
   packet->AddHeader (GetWifiActionHeader ());
   //create 802.11 header:
   WifiMacHeader hdr;
-  hdr.SetType (WIFI_MAC_MGT_ACTION);
+  hdr.SetAction ();
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
   hdr.SetAddr2 (m_parent->GetAddress ());
@@ -384,9 +376,8 @@ void
 HwmpProtocolMac::InitiatePerr (std::vector<HwmpProtocol::FailedDestination> failedDestinations, std::vector<
                                  Mac48Address> receivers)
 {
-  NS_LOG_FUNCTION (this);
   //All duplicates in PERR are checked here, and there is no reason to
-  //check it at any other place
+  //check it at any athoer place
   {
     std::vector<Mac48Address>::const_iterator end = receivers.end ();
     for (std::vector<Mac48Address>::const_iterator i = receivers.begin (); i != end; i++)
@@ -403,7 +394,6 @@ HwmpProtocolMac::InitiatePerr (std::vector<HwmpProtocol::FailedDestination> fail
         if (should_add)
           {
             m_myPerr.receivers.push_back (*i);
-            NS_LOG_DEBUG ("Initiate PERR:  Adding receiver: " << (*i));
           }
       }
   }
@@ -423,7 +413,6 @@ HwmpProtocolMac::InitiatePerr (std::vector<HwmpProtocol::FailedDestination> fail
         if (should_add)
           {
             m_myPerr.destinations.push_back (*i);
-            NS_LOG_DEBUG ("Initiate PERR:  Adding failed destination: " << (*i).destination);
           }
       }
   }
@@ -432,7 +421,7 @@ HwmpProtocolMac::InitiatePerr (std::vector<HwmpProtocol::FailedDestination> fail
 void
 HwmpProtocolMac::SendMyPerr ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION_NOARGS ();
   if (m_perrTimer.IsRunning ())
     {
       return;
@@ -487,7 +476,6 @@ HwmpProtocolMac::Report (std::ostream & os) const
 void
 HwmpProtocolMac::ResetStats ()
 {
-  NS_LOG_FUNCTION (this);
   m_stats = Statistics ();
 }
 

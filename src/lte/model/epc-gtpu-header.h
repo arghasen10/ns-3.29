@@ -109,61 +109,17 @@ public:
    * \returns the version
    */
   uint8_t GetVersion () const;
-  /**
-   * Set extension header flag function
-   * \param extensionHeaderFlag
-   */
-  void SetExtensionHeaderFlag (bool extensionHeaderFlag);
-  /**
-   * Set the length in octets of the payload
-   * \param length the length
-   */
-  void SetLength (uint16_t length);
-  /**
-   * Set message type function
-   * \param messageType the message type
-   */
-  void SetMessageType (uint8_t messageType);
-  /**
-   * Set NPDU number function
-   * \param nPduNumber the NPDU number
-   */
-  void SetNPduNumber (uint8_t nPduNumber);
-  /**
-   * Sets the flag that indicates the presence of a meaningful value of the N-PDU Number field.
-   * \param nPduNumberFlag the NPDU number flag
-   */
-  void SetNPduNumberFlag (bool nPduNumberFlag);
-  /**
-   * Set next extension type function
-   * \param nextExtensionType the next extension type
-   */
-  void SetNextExtensionType (uint8_t nextExtensionType);
-  /**
-   * Set protocol type function
-   * \param protocolType the protocol type
-   */
-  void SetProtocolType (bool protocolType);
-  /**
-   * Set sequence number function
-   * \param sequenceNumber the sequence number
-   */
-  void SetSequenceNumber (uint16_t sequenceNumber);
-  /**
-   * Set sequence number flag function
-   * \param sequenceNumberFlag the sequence number flag
-   */
-  void SetSequenceNumberFlag (bool sequenceNumberFlag);
-  /**
-   * Set TEID function
-   * \param teid the TEID
-   */
-  void SetTeid (uint32_t teid);
-  /**
-   * Set version function
-   * \param version the version
-   */
-  void SetVersion (uint8_t version);
+  void SetExtensionHeaderFlag (bool m_extensionHeaderFlag);
+  void SetLength (uint16_t m_length);
+  void SetMessageType (uint8_t m_messageType);
+  void SetNPduNumber (uint8_t m_nPduNumber);
+  void SetNPduNumberFlag (bool m_nPduNumberFlag);
+  void SetNextExtensionType (uint8_t m_nextExtensionType);
+  void SetProtocolType (bool m_protocolType);
+  void SetSequenceNumber (uint16_t m_sequenceNumber);
+  void SetSequenceNumberFlag (bool m_sequenceNumberFlag);
+  void SetTeid (uint32_t m_teid);
+  void SetVersion (uint8_t m_version);
 
   /**
    * Equality operator.

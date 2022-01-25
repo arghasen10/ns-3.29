@@ -17,14 +17,13 @@
  *
  * Author: Junling Bu <linlinjavaer@gmail.com>
  */
-
-#include <iostream>
 #include "ns3/test.h"
 #include "ns3/rng-seed-manager.h"
 #include "ns3/config.h"
 #include "ns3/data-rate.h"
 #include "ns3/vector.h"
 #include "ns3/string.h"
+#include "ns3/ssid.h"
 #include "ns3/packet-socket-address.h"
 #include "ns3/mobility-model.h"
 #include "ns3/yans-wifi-helper.h"
@@ -34,6 +33,8 @@
 #include "ns3/wifi-net-device.h"
 #include "ns3/packet-socket-server.h"
 #include "ns3/packet-socket-client.h"
+#include <iostream>
+
 #include "ns3/ocb-wifi-mac.h"
 #include "ns3/wifi-80211p-helper.h"
 #include "ns3/wave-mac-helper.h"
@@ -49,34 +50,28 @@ AssignWifiRandomStreams (Ptr<WifiMac> mac, int64_t stream)
   if (rmac)
     {
       PointerValue ptr;
-      rmac->GetAttribute ("Txop", ptr);
-      Ptr<Txop> txop = ptr.Get<Txop> ();
-      currentStream += txop->AssignStreams (currentStream);
+      rmac->GetAttribute ("DcaTxop", ptr);
+      Ptr<DcaTxop> dcaTxop = ptr.Get<DcaTxop> ();
+      currentStream += dcaTxop->AssignStreams (currentStream);
 
-      rmac->GetAttribute ("VO_Txop", ptr);
-      Ptr<QosTxop> vo_txop = ptr.Get<QosTxop> ();
-      currentStream += vo_txop->AssignStreams (currentStream);
+      rmac->GetAttribute ("VO_EdcaTxopN", ptr);
+      Ptr<EdcaTxopN> vo_edcaTxopN = ptr.Get<EdcaTxopN> ();
+      currentStream += vo_edcaTxopN->AssignStreams (currentStream);
 
-      rmac->GetAttribute ("VI_Txop", ptr);
-      Ptr<QosTxop> vi_txop = ptr.Get<QosTxop> ();
-      currentStream += vi_txop->AssignStreams (currentStream);
+      rmac->GetAttribute ("VI_EdcaTxopN", ptr);
+      Ptr<EdcaTxopN> vi_edcaTxopN = ptr.Get<EdcaTxopN> ();
+      currentStream += vi_edcaTxopN->AssignStreams (currentStream);
 
-      rmac->GetAttribute ("BE_Txop", ptr);
-      Ptr<QosTxop> be_txop = ptr.Get<QosTxop> ();
-      currentStream += be_txop->AssignStreams (currentStream);
+      rmac->GetAttribute ("BE_EdcaTxopN", ptr);
+      Ptr<EdcaTxopN> be_edcaTxopN = ptr.Get<EdcaTxopN> ();
+      currentStream += be_edcaTxopN->AssignStreams (currentStream);
 
-      rmac->GetAttribute ("BK_Txop", ptr);
-      Ptr<QosTxop> bk_txop = ptr.Get<QosTxop> ();
-      currentStream += bk_txop->AssignStreams (currentStream);
+      rmac->GetAttribute ("BK_EdcaTxopN", ptr);
+      Ptr<EdcaTxopN> bk_edcaTxopN = ptr.Get<EdcaTxopN> ();
+      currentStream += bk_edcaTxopN->AssignStreams (currentStream);
     }
 }
 
-/**
- * \ingroup wave-test
- * \ingroup tests
- *
- * \brief Ocb Wifi Mac Test Case
- */
 class OcbWifiMacTestCase : public TestCase
 {
 public:
@@ -85,81 +80,30 @@ public:
 private:
   virtual void DoRun (void);
 
-  /**
-   * MAC associate function
-   * \param context the context
-   * \param bssid the BSSID
-   */
-  void MacAssoc (std::string context, Mac48Address bssid);
-  /**
-   * Phy receive ok trace function
-   * \param context the context
-   * \param packet the packet
-   * \param snr the SNR
-   * \param mode the mode
-   * \param preamble the preamble
-   */
+  void MacAssoc (std::string context,Mac48Address bssid);
   void PhyRxOkTrace (std::string context, Ptr<const Packet> packet, double snr, WifiMode mode, enum WifiPreamble preamble);
-  /**
-   * Phy transmit trace function
-   * \param context the context
-   * \param packet the packet
-   * \param mode the mode
-   * \param preamble the preamble
-   * \param txPower the transmit power
-   */
   void PhyTxTrace (std::string context, Ptr<const Packet> packet, WifiMode mode, WifiPreamble preamble, uint8_t txPower);
-  /**
-   * Get current position function
-   * \param i the current position index
-   * \returns the current position vector
-   */
   Vector GetCurrentPosition (uint32_t i);
-  /**
-   * Advance position function
-   * \param node the node
-   */
   void AdvancePosition (Ptr<Node> node);
 
-  /// Pre random configuration function
   void PreRandomConfiguration (void);
-  /**
-   * Configure AP STA mode function
-   * \param static_node the static node
-   * \param mobile_node the mobile node
-   */
   void ConfigureApStaMode (Ptr<Node> static_node, Ptr<Node> mobile_node);
-  /**
-   * Configure adhoc mode function
-   * \param static_node the static node
-   * \param mobile_node the mobile node
-   */
   void ConfigureAdhocMode (Ptr<Node> static_node, Ptr<Node> mobile_node);
-  /**
-   * Configure OCB mode function
-   * \param static_node the static node
-   * \param mobile_node the mobile node
-   */
   void ConfigureOcbMode (Ptr<Node> static_node, Ptr<Node> mobile_node);
-  /**
-   * Post device configuration function
-   * \param static_node the static node
-   * \param mobile_node the mobile node
-   */
   void PostDeviceConfiguration (Ptr<Node> static_node, Ptr<Node> mobile_node);
 
-  Time phytx_time; ///< Phy transmit time
-  Vector phytx_pos; ///< Phy transmit position
+  Time phytx_time;
+  Vector phytx_pos;
 
-  Time macassoc_time; ///< MAC associate time
-  Vector macassoc_pos; ///< MAC associate position
+  Time macassoc_time;
+  Vector macassoc_pos;
 
-  Time phyrx_time; ///< Phy receive time
-  Vector phyrx_pos; ///< Phy receive position
+  Time phyrx_time;
+  Vector phyrx_pos;
 
   // nodes.Get (0) is static node
   // nodes.Get (1) is mobile node
-  NodeContainer nodes; ///< the nodes
+  NodeContainer nodes;
 };
 
 OcbWifiMacTestCase::OcbWifiMacTestCase (void)
@@ -310,9 +254,9 @@ OcbWifiMacTestCase::PostDeviceConfiguration (Ptr<Node> static_node, Ptr<Node> mo
   Ptr<WifiNetDevice> mobile_device = DynamicCast<WifiNetDevice> (mobile_node->GetDevice (0));
 
   // Fix the stream assignment to the Dcf Txop objects (backoffs)
-  // The below stream assignment will result in the Txop object
+  // The below stream assignment will result in the DcaTxop object
   // using a backoff value of zero for this test when the
-  // Txop::EndTxNoAck() calls to StartBackoffNow()
+  // DcaTxop::EndTxNoAck() calls to StartBackoffNow()
   AssignWifiRandomStreams (static_device->GetMac (), 21);
   AssignWifiRandomStreams (mobile_device->GetMac (), 22);
 
@@ -440,12 +384,6 @@ OcbWifiMacTestCase::PreRandomConfiguration ()
   // the WiFi random variables is set in PostDeviceConfiguration method.
 }
 
-/**
- * \ingroup wave-test
- * \ingroup tests
- *
- * \brief Ocb Test Suite
- */
 class OcbTestSuite : public TestSuite
 {
 public:
@@ -460,5 +398,5 @@ OcbTestSuite::OcbTestSuite ()
 }
 
 // Do not forget to allocate an instance of this TestSuite
-static OcbTestSuite ocbTestSuite; ///< the test suite
+static OcbTestSuite ocbTestSuite;
 

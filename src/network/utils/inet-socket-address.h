@@ -117,7 +117,6 @@ public:
 private:
   /**
    * \brief Convert to an Address type
-   * \return the Address corresponding to this object.
    */
   Address ConvertTo (void) const;
 

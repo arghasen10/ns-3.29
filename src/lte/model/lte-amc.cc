@@ -87,24 +87,17 @@ static const double SpectralEfficiencyForMcs[32] = {
   0, 0, 0
 };
 
+//static int MaxMcs = 28;  // LTE
+static int MaxMcs = 9;   // NB-IoT
+
 /**
  * Table of MCS index (IMCS) and its TBS index (ITBS). Taken from 3GPP TS
  * 36.213 v8.8.0 Table 7.1.7.1-1: _Modulation and TBS index table for PDSCH_.
  * The index of the vector (range 0-28) identifies the MCS index.
  */
-static const int McsToItbsDl[29] = {
+static const int McsToItbs[29] = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 10, 11, 12, 13, 14, 15, 15, 16, 17, 18,
   19, 20, 21, 22, 23, 24, 25, 26
-};
-
-/**
- * Table of MCS index (IMCS) and its TBS index (ITBS). Taken from 3GPP TS
- * 36.213 v8.8.0 Table 8.6.1-1: _Modulation, TBS index and redundancy version table for PUSCH_.
- * The index of the vector (range 0-28) identifies the MCS index.
- */
-static const int McsToItbsUl[29] = {
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-  19, 19, 20, 21, 22, 23, 24, 25, 26
 };
 
 /**
@@ -267,7 +260,7 @@ LteAmc::GetCqiFromSpectralEfficiency (double s)
   NS_LOG_FUNCTION (s);
   NS_ASSERT_MSG (s >= 0.0, "negative spectral efficiency = " << s);
   int cqi = 0;
-  while ((cqi < 15) && (SpectralEfficiencyForCqi[cqi + 1] < s))
+  while ((cqi < 12) && (SpectralEfficiencyForCqi[cqi + 1] < s))
     {
       ++cqi;
     }
@@ -283,7 +276,7 @@ LteAmc::GetMcsFromCqi (int cqi)
   NS_ASSERT_MSG (cqi >= 0 && cqi <= 15, "CQI must be in [0..15] = " << cqi);
   double spectralEfficiency = SpectralEfficiencyForCqi[cqi];
   int mcs = 0;
-  while ((mcs < 28) && (SpectralEfficiencyForMcs[mcs + 1] <= spectralEfficiency))
+  while ((mcs < MaxMcs) && (SpectralEfficiencyForMcs[mcs + 1] <= spectralEfficiency))
     {
       ++mcs;
     }
@@ -292,26 +285,14 @@ LteAmc::GetMcsFromCqi (int cqi)
 }
 
 int
-LteAmc::GetDlTbSizeFromMcs (int mcs, int nprb)
+LteAmc::GetTbSizeFromMcs (int mcs, int nprb)
 {
   NS_LOG_FUNCTION (mcs);
 
   NS_ASSERT_MSG (mcs < 29, "MCS=" << mcs);
   NS_ASSERT_MSG (nprb < 111, "NPRB=" << nprb);
 
-  int itbs = McsToItbsDl[mcs];
-  return (TransportBlockSizeTable[nprb - 1][itbs]);
-}
-
-int
-LteAmc::GetUlTbSizeFromMcs (int mcs, int nprb)
-{
-  NS_LOG_FUNCTION (mcs);
-
-  NS_ASSERT_MSG (mcs < 29, "MCS=" << mcs);
-  NS_ASSERT_MSG (nprb < 111, "NPRB=" << nprb);
-
-  int itbs = McsToItbsUl[mcs];
+  int itbs = McsToItbs[mcs];
   return (TransportBlockSizeTable[nprb - 1][itbs]);
 }
 
@@ -381,10 +362,10 @@ LteAmc::CreateCqiFeedbacks (const SpectrumValue& sinr, uint8_t rbgSize)
          {
             uint8_t mcs = 0;
             TbStats_t tbStats;
-            while (mcs <= 28)
+            while (mcs <= MaxMcs)
               {
                 HarqProcessInfoList_t harqInfoList;
-                tbStats = LteMiErrorModel::GetTbDecodificationStats (sinr, rbgMap, (uint16_t)GetDlTbSizeFromMcs (mcs, rbgSize) / 8, mcs, harqInfoList);
+                tbStats = LteMiErrorModel::GetTbDecodificationStats (sinr, rbgMap, (uint16_t)GetTbSizeFromMcs (mcs, rbgSize) / 8, mcs, harqInfoList);
                 if (tbStats.tbler > 0.1)
                   {
                     break;
@@ -402,7 +383,7 @@ LteAmc::CreateCqiFeedbacks (const SpectrumValue& sinr, uint8_t rbgSize)
               {
                 rbgCqi = 0; // any MCS can guarantee the 10 % of BER
               }
-            else if (mcs == 28)
+            else if (mcs == MaxMcs)
               {
                 rbgCqi = 15; // all MCSs can guarantee the 10 % of BER
               }

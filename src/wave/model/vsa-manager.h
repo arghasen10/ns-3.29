@@ -24,8 +24,6 @@
 namespace ns3 {
 
 /**
- * \ingroup wave
- *
  * \brief indicate which interval the VSA frames will be transmitted in.
  * VSA_TRANSMIT_IN_CCHI will only allow in CCH Interval;
  * VSA_TRANSMIT_IN_SCHI will only allow in SCH Interval;
@@ -39,8 +37,6 @@ enum VsaTransmitInterval
 };
 
 /**
- * \ingroup wave
- *
  * \param peer The address of the peer MAC entity to which the
  * VSA is sent.
  * \param oi Identifies the source of the data when the source
@@ -49,6 +45,7 @@ enum VsaTransmitInterval
  * is an IEEE 1609 entity. Values are specified in IEEE P1609.0.
  * Valid range: 0-15
  * \param vsc pointer to Information that will be sent as vendor specific content.
+ * \param vscLength the length of vendor specific content
  * \param channelNumber The channel on which the transmissions are to occur.
  * While section 7.2 of the standard specifies that channel identification
  * comprises Country String, Operating Class, and Channel Number, the channel
@@ -56,29 +53,19 @@ enum VsaTransmitInterval
  * \param repeatRate The number of Vendor Specific Action frames to
  * be transmitted per 5 s. A value of 0 indicates a single message is to be sent.
  * If Destination MAC Address is an individual address, Repeat Rate is ignored.
- * \param sendInterval The channel interval in which the transmissions
+ * \param channelInterval The channel interval in which the transmissions
  * are to occur.
  */
 struct VsaInfo
 {
-  Mac48Address peer; ///< peer
-  OrganizationIdentifier oi; ///< OI
-  uint8_t managementId; ///< management ID
-  Ptr<Packet> vsc; ///< VSC
-  uint32_t channelNumber; ///< channel number
-  uint8_t repeatRate; ///< repeat rate
-  enum VsaTransmitInterval sendInterval; ///< send interval
+  Mac48Address peer;
+  OrganizationIdentifier oi;
+  uint8_t managementId;
+  Ptr<Packet> vsc;
+  uint32_t channelNumber;
+  uint8_t repeatRate;
+  enum VsaTransmitInterval sendInterval;
 
-  /**
-   * Initializer
-   * \param peer the peer MAC address
-   * \param identifier the organization identifier
-   * \param manageId the manage ID
-   * \param vscPacket the VSC packet
-   * \param channel the channel
-   * \param repeat the repeat value
-   * \param interval the transmit interval
-   */
   VsaInfo (Mac48Address peer, OrganizationIdentifier identifier, uint8_t manageId, Ptr<Packet> vscPacket,
            uint32_t channel, uint8_t repeat, enum VsaTransmitInterval interval)
     : peer (peer),
@@ -94,8 +81,6 @@ struct VsaInfo
 };
 
 /**
- * \ingroup wave
- *
  * refer to 1609.4-2010 chapter 6.4
  * Vendor Specific Action (VSA) frames transmission.
  *
@@ -119,10 +104,6 @@ struct VsaInfo
 class VsaManager : public Object
 {
 public:
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
   static TypeId GetTypeId (void);
   VsaManager (void);
   virtual ~VsaManager (void);
@@ -132,7 +113,6 @@ public:
    */
   void SetWaveNetDevice (Ptr<WaveNetDevice> device);
 
-  /// set wave vsa callback function
   void SetWaveVsaCallback (Callback<bool, Ptr<const Packet>,const Address &, uint32_t, uint32_t>  vsaCallback);
 
   /**
@@ -148,7 +128,7 @@ public:
    */
   void RemoveByChannel (uint32_t channelNumber);
   /**
-   * \param oi cancel VSA transmission specified by organization identifier
+   * \param channelNumber cancel VSA transmission specified by organization identifier
    */
   void RemoveByOrganizationIdentifier (const OrganizationIdentifier &oi);
 private:
@@ -160,23 +140,21 @@ private:
    * \param oi the Organization Identifier of received VSA frame
    * \param vsc the vendor specific content of received VSA frame
    * \param src the source address of received VSA frame
-   * \return true if successful
    */
   bool ReceiveVsc (Ptr<WifiMac> mac, const OrganizationIdentifier &oi, Ptr<const Packet> vsc, const Address &src);
 
-  /// A number of VSA frames will be transmitted repeatedly during the period of 5s.
+  // A number of VSA frames will be transmitted repeatedly during the period of 5s.
   const static uint32_t VSA_REPEAT_PERIOD = 5;
 
-  /// VsaWork structure
   struct VsaWork
   {
-    Mac48Address peer; ///< peer
-    OrganizationIdentifier oi; ///< OI
-    Ptr<Packet> vsc; ///< VSC
-    uint32_t channelNumber; ///< channel number
-    enum VsaTransmitInterval sentInterval; ///< VSA transmit interval
-    Time repeatPeriod; ///< repeat period
-    EventId repeat; ///< repeat ID
+    Mac48Address peer;
+    OrganizationIdentifier oi;
+    Ptr<Packet> vsc;
+    uint32_t channelNumber;
+    enum VsaTransmitInterval sentInterval;
+    Time repeatPeriod;
+    EventId repeat;
   };
 
   /**
@@ -194,9 +172,9 @@ private:
    */
   void DoSendVsa (enum VsaTransmitInterval  interval, uint32_t channel, Ptr<Packet> vsc, OrganizationIdentifier oi, Mac48Address peer);
 
-  Callback<bool, Ptr<const Packet>,const Address &, uint32_t, uint32_t> m_vsaReceived; ///< VSA received callback
-  std::vector<VsaWork *> m_vsas; ///< VSAs
-  Ptr<WaveNetDevice> m_device; ///< the device
+  Callback<bool, Ptr<const Packet>,const Address &, uint32_t, uint32_t> m_vsaReceived;
+  std::vector<VsaWork *> m_vsas;
+  Ptr<WaveNetDevice> m_device;
 };
 
 }

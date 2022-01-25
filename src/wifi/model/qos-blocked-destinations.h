@@ -23,17 +23,15 @@
 #define QOS_BLOCKED_DESTINATIONS_H
 
 #include <set>
-#include "ns3/simple-ref-count.h"
+#include "ns3/mac48-address.h"
 
 namespace ns3 {
-
-class Mac48Address;
 
 /**
  * Keep track of destination address - TID pairs that are waiting
  * for a block ACK response.
  */
-class QosBlockedDestinations : public SimpleRefCount<QosBlockedDestinations>
+class QosBlockedDestinations
 {
 public:
   QosBlockedDestinations ();
@@ -69,7 +67,7 @@ public:
 
 
 private:
-  std::set < std::pair < Mac48Address, uint8_t >> m_blockedQosPackets; ///< blocked QOS packets
+  std::set<std::pair<Mac48Address, uint8_t>> m_blockedQosPackets;
 };
 
 } //namespace ns3
